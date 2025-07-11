@@ -1,7 +1,7 @@
 {
-  "name": "",
+  "name": "equipment-move-form-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Azure Functions backend for Equipment Move Form - collects equipment move data and sends to Power Automate",
   "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
