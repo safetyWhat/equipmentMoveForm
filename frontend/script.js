@@ -114,6 +114,8 @@ async function submitToAzureFunction(formData) {
             unitNumber: formData.get('unitNumber').trim(),
             moveDate: formData.get('moveDate'),
             equipmentHours: parseFloat(formData.get('equipmentHours')),
+			locationFrom: formData.get('locationFrom').trim(),
+			locationTo: formData.get('locationTo').trim(),
             notes: formData.get('notes').trim() || '',
             photos: base64Files,
             submittedAt: new Date().toISOString()

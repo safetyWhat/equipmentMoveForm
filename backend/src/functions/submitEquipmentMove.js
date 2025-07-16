@@ -35,6 +35,15 @@ function validateRequestData(data) {
         errors.push('equipmentHours must be a non-negative number');
     }
     
+    // Add validation for location fields
+    if (!data.locationFrom || typeof data.locationFrom !== 'string' || !data.locationFrom.trim()) {
+        errors.push('locationFrom is required and must be a non-empty string');
+    }
+    
+    if (!data.locationTo || typeof data.locationTo !== 'string' || !data.locationTo.trim()) {
+        errors.push('locationTo is required and must be a non-empty string');
+    }
+    
     // Validate photos array if present
     if (data.photos && Array.isArray(data.photos)) {
         data.photos.forEach((photo, index) => {
@@ -67,6 +76,8 @@ function formatDataForPowerAutomate(data) {
             unitNumber: data.unitNumber.trim(),
             moveDate: data.moveDate,
             hours: data.equipmentHours,
+			locationFrom: data.locationFrom.trim(),
+			locationTo: data.locationTo.trim(),
             notes: data.notes?.trim() || ''
         },
         photos: data.photos || [],
@@ -178,6 +189,8 @@ app.http('submitEquipmentMove', {
                 unitNumber: requestData.unitNumber,
                 moveDate: requestData.moveDate,
                 equipmentHours: requestData.equipmentHours,
+				locationFrom: requestData.locationFrom,
+				locationTo: requestData.locationTo,
                 photosCount: requestData.photos?.length || 0
             });
             
