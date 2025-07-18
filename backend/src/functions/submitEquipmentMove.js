@@ -1,4 +1,6 @@
 const { app } = require('@azure/functions');
+const { authenticate } = require('../middleware/auth');
+const { createEquipmentMove } = require('../utils/database');
 
 // Configuration
 const CONFIG = {
@@ -164,6 +166,20 @@ app.http('submitEquipmentMove', {
         }
         
         try {
+            // Optional authentication - if token is provided, validate it
+            let authenticatedUser = null;
+            const authHeader = request.headers.authorization || request.headers.Authorization;
+            
+            if (authHeader) {
+                const authResult = await authenticate(request);
+                if (authResult.isAuthenticated) {
+                    authenticatedUser = authResult.user;
+                    context.log('Authenticated user:', authenticatedUser.email);
+                } else {
+                    context.log.warn('Authentication failed but continuing with anonymous submission');
+                }
+            }
+            
             // Parse request body
             let requestData;
             try {
@@ -218,6 +234,31 @@ app.http('submitEquipmentMove', {
                 timestamp: formattedData.timestamp
             });
             
+            // Save to database
+            try {
+                const equipmentMoveData = {
+                    submissionId: formattedData.submissionId,
+                    userName: requestData.userName,
+                    unitNumber: requestData.unitNumber,
+                    moveDate: new Date(requestData.moveDate),
+                    equipmentHours: requestData.equipmentHours,
+                    locationFrom: requestData.locationFrom,
+                    locationTo: requestData.locationTo,
+                    notes: requestData.notes || null,
+                    photos: requestData.photos || null
+                };
+                
+                const savedMove = await createEquipmentMove(
+                    equipmentMoveData, 
+                    authenticatedUser?.id || null
+                );
+                
+                context.log('Equipment move saved to database:', savedMove.id);
+            } catch (dbError) {
+                context.log.error('Database error:', dbError);
+                // Continue processing even if database fails
+            }
+            
             // Send to Power Automate (if URL is configured)
             let powerAutomateResult = null;
             if (CONFIG.POWER_AUTOMATE_WEBHOOK_URL && CONFIG.POWER_AUTOMATE_WEBHOOK_URL !== 'https://your-power-automate-flow-url-here') {
@@ -239,7 +280,8 @@ app.http('submitEquipmentMove', {
                 submissionId: formattedData.submissionId,
                 timestamp: formattedData.timestamp,
                 message: 'Equipment move form submitted successfully',
-                powerAutomateStatus: powerAutomateResult ? 'sent' : 'skipped'
+                powerAutomateStatus: powerAutomateResult ? 'sent' : 'skipped',
+                authenticatedUser: authenticatedUser ? authenticatedUser.email : null
             };
             
             context.log('Form submission completed successfully:', response);

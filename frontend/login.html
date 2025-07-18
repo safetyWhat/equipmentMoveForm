@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Equipment Move Form</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #666;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .user-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .user-info h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        
+        .user-info p {
+            margin: 5px 0;
+            color: #333;
+        }
+        
+        .logout-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .main-app-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-left: 10px;
+        }
+        
+        .main-app-btn:hover {
+            background: #45a049;
+        }
+        
+        .admin-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .admin-section h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        
+        .admin-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .admin-btn:hover {
+            background: #f57c00;
+        }
+        
+        .users-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .user-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        
+        .user-item strong {
+            color: #333;
+        }
+        
+        .user-role {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .user-role.admin {
+            background: #ff5722;
+            color: white;
+        }
+        
+        .user-role.user {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .create-user-form {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .create-user-form input,
+        .create-user-form select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .create-user-form button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .create-user-form button:hover {
+            background: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Equipment Move Form</h1>
+                <p>Please log in to continue</p>
+            </div>
+            
+            <div id="errorMessage" class="error-message hidden"></div>
+            <div id="successMessage" class="success-message hidden"></div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="form-container">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="submit-btn">Login</button>
+            </form>
+            
+            <!-- User Info (shown when logged in) -->
+            <div id="userInfo" class="user-info hidden">
+                <h3>Welcome!</h3>
+                <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                <p><strong>Role:</strong> <span id="userRole"></span></p>
+                <p><strong>Login Time:</strong> <span id="loginTime"></span></p>
+                
+                <button class="logout-btn" onclick="logout()">Logout</button>
+                <button class="main-app-btn" onclick="goToMainApp()">Go to Equipment Form</button>
+            </div>
+            
+            <!-- Admin Section -->
+            <div id="adminSection" class="admin-section hidden">
+                <h3>Admin Panel</h3>
+                <button class="admin-btn" onclick="showCreateUserForm()">Create User</button>
+                <button class="admin-btn" onclick="loadUsers()">List Users</button>
+                
+                <!-- Create User Form -->
+                <div id="createUserForm" class="create-user-form hidden">
+                    <h4>Create New User</h4>
+                    <input type="email" id="newUserEmail" placeholder="Email" required>
+                    <input type="password" id="newUserPassword" placeholder="Password" required>
+                    <select id="newUserRole">
+                        <option value="USER">User</option>
+                        <option value="ADMIN">Admin</option>
+                    </select>
+                    <button onclick="createUser()">Create User</button>
+                    <button onclick="hideCreateUserForm()">Cancel</button>
+                </div>
+                
+                <!-- Users List -->
+                <div id="usersList" class="users-list hidden"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+</body>
+</html>

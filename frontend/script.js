@@ -121,11 +121,19 @@ async function submitToAzureFunction(formData) {
             submittedAt: new Date().toISOString()
         };
         
+        // Prepare headers
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        
+        // Add authentication header if available
+        if (window.AuthUtils && window.AuthUtils.getAuthToken()) {
+            headers['Authorization'] = `Bearer ${window.AuthUtils.getAuthToken()}`;
+        }
+        
         const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify(data)
         });
         
