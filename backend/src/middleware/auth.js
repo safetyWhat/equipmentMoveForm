@@ -8,19 +8,29 @@ const { findUserById } = require('../utils/database');
  */
 async function authenticateUser(request) {
     try {
-        const authHeader = request.headers.authorization || request.headers.Authorization;
+        // Normalize header access - Azure Functions uses lowercase
+        const authHeader = request.headers.authorization || request.headers['Authorization'];
         const token = extractTokenFromHeader(authHeader);
         
         if (!token) {
             return {
                 isAuthenticated: false,
-                error: 'No token provided',
+                error: 'Authentication required',
                 statusCode: 401
             };
         }
-        
-        // Verify token
-        const decoded = verifyToken(token);
+
+        // Verify token with better error handling
+        let decoded;
+        try {
+            decoded = verifyToken(token);
+        } catch (tokenError) {
+            return {
+                isAuthenticated: false,
+                error: 'Invalid or expired token',
+                statusCode: 401
+            };
+        }
         
         // Get user from database
         const user = await findUserById(decoded.id);
@@ -28,7 +38,7 @@ async function authenticateUser(request) {
         if (!user) {
             return {
                 isAuthenticated: false,
-                error: 'User not found',
+                error: 'Invalid credentials',
                 statusCode: 401
             };
         }
@@ -40,9 +50,10 @@ async function authenticateUser(request) {
         };
         
     } catch (error) {
+        console.error('Authentication error:', error);
         return {
             isAuthenticated: false,
-            error: error.message,
+            error: 'Authentication failed',
             statusCode: 401
         };
     }
@@ -124,15 +135,22 @@ async function authenticate(request, requiredRole = null) {
 }
 
 /**
- * Get CORS headers
+ * Get CORS headers - should be environment-specific
  * @returns {Object} - CORS headers
  */
 function getCorsHeaders() {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
+        process.env.ALLOWED_ORIGINS.split(',') : 
+        ['http://localhost:3000', 'http://127.0.0.1:5500'];
+    
     return {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
+            ? allowedOrigins[0] // Use first allowed origin in production
+            : '*', // Allow all in development
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400'
+        'Access-Control-Max-Age': '86400',
+        'Access-Control-Allow-Credentials': 'true'
     };
 }
 

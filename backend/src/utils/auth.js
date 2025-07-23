@@ -1,10 +1,22 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// Configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// Load environment variables for local development
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
+
+// Configuration - Add debugging
+console.log('Loading auth configuration...');
+console.log('JWT_SECRET from env:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('JWT_EXPIRES_IN from env:', process.env.JWT_EXPIRES_IN);
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
 const BCRYPT_ROUNDS = 12;
+
+console.log('Final JWT_SECRET:', JWT_SECRET.substring(0, 20) + '...');
+console.log('Final JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
 
 /**
  * Hash a password using bcrypt
@@ -43,11 +55,23 @@ async function verifyPassword(password, hashedPassword) {
  */
 function generateToken(payload) {
     try {
+        console.log('Generating token with payload:', payload);
+        console.log('Using JWT_SECRET:', JWT_SECRET.substring(0, 20) + '...');
+        console.log('Using JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
+        
         const token = jwt.sign(payload, JWT_SECRET, { 
             expiresIn: JWT_EXPIRES_IN 
         });
+        
+        // Decode the token to verify expiration
+        const decoded = jwt.decode(token);
+        console.log('Token generated successfully');
+        console.log('Token expires at:', new Date(decoded.exp * 1000));
+        console.log('Current time:', new Date());
+        
         return token;
     } catch (error) {
+        console.error('Error generating token:', error);
         throw new Error('Error generating token');
     }
 }
@@ -59,14 +83,30 @@ function generateToken(payload) {
  */
 function verifyToken(token) {
     try {
+        console.log('Verifying token:', token.substring(0, 50) + '...');
+        console.log('Using JWT_SECRET for verification:', JWT_SECRET.substring(0, 20) + '...');
+        
         const decoded = jwt.verify(token, JWT_SECRET);
+        
+        console.log('Token verified successfully');
+        console.log('Decoded payload:', decoded);
+        console.log('Token expires at:', new Date(decoded.exp * 1000));
+        console.log('Current time:', new Date());
+        console.log('Time until expiry (seconds):', decoded.exp - Math.floor(Date.now() / 1000));
+        
         return decoded;
     } catch (error) {
+        console.error('Token verification failed:', error.message);
+        console.error('Error name:', error.name);
+        
         if (error.name === 'TokenExpiredError') {
+            console.error('Token expired at:', new Date(error.expiredAt));
             throw new Error('Token expired');
         } else if (error.name === 'JsonWebTokenError') {
+            console.error('Invalid token structure');
             throw new Error('Invalid token');
         } else {
+            console.error('Other token error:', error);
             throw new Error('Token verification failed');
         }
     }
@@ -119,8 +159,8 @@ function validatePassword(password) {
         errors.push('Password must contain at least one number');
     }
     
-    if (!/(?=.*[!@#$%^&*])/.test(password)) {
-        errors.push('Password must contain at least one special character (!@#$%^&*)');
+    if (!/(?=.*[!@#$%^&*_])/.test(password)) {
+        errors.push('Password must contain at least one special character (!@#$%^&*_)');
     }
     
     return {

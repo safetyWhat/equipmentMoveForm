@@ -68,6 +68,7 @@ function isAuthenticated() {
     const user = getUser();
     
     if (!token || !user) {
+        console.log('Authentication check failed: No token or user found');
         return false;
     }
     
@@ -76,7 +77,16 @@ function isAuthenticated() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const currentTime = Date.now() / 1000;
         
+        console.log('Token debug info:', {
+            issuedAt: payload.iat,
+            expiresAt: payload.exp,
+            currentTime: currentTime,
+            timeUntilExpiry: payload.exp - currentTime,
+            tokenAge: currentTime - payload.iat
+        });
+        
         if (payload.exp < currentTime) {
+            console.log('Token expired, removing from storage');
             removeAuthToken();
             return false;
         }

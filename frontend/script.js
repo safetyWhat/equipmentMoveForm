@@ -13,6 +13,69 @@ const successMessage = document.getElementById('successMessage');
 const errorMessage = document.getElementById('errorMessage');
 const errorText = document.getElementById('errorText');
 
+// Authentication DOM Elements
+const loginPrompt = document.getElementById('loginPrompt');
+const userWelcome = document.getElementById('userWelcome');
+const currentUserEmail = document.getElementById('currentUserEmail');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// Authentication functions
+function checkAuthenticationStatus() {
+    const isAuth = window.AuthUtils && window.AuthUtils.isAuthenticated();
+    
+    if (isAuth) {
+        const user = window.AuthUtils.getUser();
+        if (user) {
+            showAuthenticatedState(user);
+        } else {
+            showUnauthenticatedState();
+        }
+    } else {
+        showUnauthenticatedState();
+    }
+    
+    return isAuth;
+}
+
+function showAuthenticatedState(user) {
+    loginPrompt.classList.add('hidden');
+    userWelcome.classList.remove('hidden');
+    currentUserEmail.textContent = user.email;
+    form.classList.remove('disabled');
+    
+    // Remove any auth warning messages
+    const authMessages = document.querySelectorAll('.auth-message');
+    authMessages.forEach(msg => msg.remove());
+}
+
+function showUnauthenticatedState() {
+    loginPrompt.classList.remove('hidden');
+    userWelcome.classList.add('hidden');
+    form.classList.add('disabled');
+    
+    // Add authentication warning message
+    if (!document.querySelector('.auth-message')) {
+        const authMessage = document.createElement('div');
+        authMessage.className = 'auth-message';
+        authMessage.innerHTML = `
+            <h3>Authentication Required</h3>
+            <p>You must be logged in to submit equipment moves. <a href="login.html">Click here to login</a></p>
+        `;
+        form.parentNode.insertBefore(authMessage, form);
+    }
+}
+
+function handleLogout() {
+    if (window.AuthUtils) {
+        window.AuthUtils.logout();
+    } else {
+        // Fallback logout
+        localStorage.removeItem('equipmentMoveAuthToken');
+        localStorage.removeItem('equipmentMoveUser');
+        window.location.href = 'login.html';
+    }
+}
+
 // Form validation
 function validateForm(formData) {
     const errors = [];
@@ -155,6 +218,13 @@ async function submitToAzureFunction(formData) {
 async function handleFormSubmit(event) {
     event.preventDefault();
     
+    // Check authentication first
+    if (!checkAuthenticationStatus()) {
+        errorText.textContent = 'You must be logged in to submit equipment moves. Please login first.';
+        showElement(errorMessage);
+        return;
+    }
+    
     // Hide all messages and show loading
     hideAllMessages();
     showElement(loadingSpinner);
@@ -202,6 +272,14 @@ async function handleFormSubmit(event) {
 
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize authentication status
+    checkAuthenticationStatus();
+    
+    // Add logout button event listener
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    
     form.addEventListener('submit', handleFormSubmit);
     
     // Add real-time validation for file inputs

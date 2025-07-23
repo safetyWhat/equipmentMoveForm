@@ -212,3 +212,101 @@ label:has(+ textarea[required])::after {
     content: " *";
     color: #dc3545;
 }
+
+/* Authentication Status */
+.auth-status {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-prompt {
+    text-align: center;
+}
+
+.login-prompt p {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.login-prompt a {
+    color: #fff;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.login-prompt a:hover {
+    text-decoration: none;
+}
+
+.user-welcome {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.user-welcome p {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.logout-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Form disabled state */
+.form-container.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.form-container.disabled::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+/* Auth message styles */
+.auth-message {
+    background: #fff3cd;
+    color: #856404;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 40px;
+    border-left: 4px solid #ffc107;
+    text-align: center;
+}
+
+.auth-message h3 {
+    margin: 0 0 10px 0;
+    color: #856404;
+}
+
+.auth-message p {
+    margin: 0;
+}
+
+.auth-message a {
+    color: #856404;
+    font-weight: 600;
+}
