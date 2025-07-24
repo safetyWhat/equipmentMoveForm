@@ -21,7 +21,30 @@ const logoutBtn = document.getElementById('logoutBtn');
 
 // Authentication functions
 function checkAuthenticationStatus() {
-    const isAuth = window.AuthUtils && window.AuthUtils.isAuthenticated();
+    // Wait for AuthUtils to be available
+    if (!window.AuthUtils) {
+        console.log('AuthUtils not yet available, checking localStorage directly');
+        // Fallback to direct localStorage check
+        const token = localStorage.getItem('equipmentMoveAuthToken');
+        const user = localStorage.getItem('equipmentMoveUser');
+        
+        if (token && user) {
+            try {
+                const userObj = JSON.parse(user);
+                showAuthenticatedState(userObj);
+                return true;
+            } catch (error) {
+                console.error('Error parsing stored user:', error);
+                showUnauthenticatedState();
+                return false;
+            }
+        } else {
+            showUnauthenticatedState();
+            return false;
+        }
+    }
+    
+    const isAuth = window.AuthUtils.isAuthenticated();
     
     if (isAuth) {
         const user = window.AuthUtils.getUser();
@@ -30,8 +53,10 @@ function checkAuthenticationStatus() {
         } else {
             showUnauthenticatedState();
         }
+		console.log('User is authenticated:', user);
     } else {
         showUnauthenticatedState();
+		console.log('User is not authenticated');
     }
     
     return isAuth;
@@ -192,6 +217,12 @@ async function submitToAzureFunction(formData) {
         // Add authentication header if available
         if (window.AuthUtils && window.AuthUtils.getAuthToken()) {
             headers['Authorization'] = `Bearer ${window.AuthUtils.getAuthToken()}`;
+        } else {
+            // Fallback to direct localStorage access
+            const token = localStorage.getItem('equipmentMoveAuthToken');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
         }
         
         const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {

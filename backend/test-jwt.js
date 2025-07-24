@@ -1,16 +1,24 @@
 #!/usr/bin/env node
 
+// Load environment variables first
+require('dotenv').config();
+
 const jwt = require('jsonwebtoken');
 
 // Test JWT functionality
 console.log('=== JWT Test Script ===');
 
-// Use the same values as in local.settings.json
-const JWT_SECRET = 'f3a1c8b9c6d7e2a8479f1d2c3a4b5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d';
-const JWT_EXPIRES_IN = '7d';
+// Use environment variables instead of hardcoded values
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-console.log('JWT_SECRET:', JWT_SECRET.substring(0, 20) + '...');
+console.log('JWT_SECRET:', JWT_SECRET ? JWT_SECRET.substring(0, 20) + '...' : 'NOT SET');
 console.log('JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
+
+if (!JWT_SECRET) {
+    console.error('❌ JWT_SECRET not found in environment variables');
+    process.exit(1);
+}
 
 // Create test payload
 const testPayload = {

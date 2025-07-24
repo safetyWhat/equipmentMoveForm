@@ -1,10 +1,15 @@
+// Load environment variables for local development
+if (!process.env.AzureWebJobsStorage || process.env.NODE_ENV === 'development') {
+    require('dotenv').config();
+}
+
 const { app } = require('@azure/functions');
 const { authenticate } = require('../middleware/auth');
 const { createEquipmentMove } = require('../utils/database');
 
 // Configuration
 const CONFIG = {
-    POWER_AUTOMATE_WEBHOOK_URL: process.env.POWER_AUTOMATE_WEBHOOK_URL || '',
+    POWER_AUTOMATE_WEBHOOK_URL: process.env.POWER_AUTOMATE_WEBHOOK_URL,
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };

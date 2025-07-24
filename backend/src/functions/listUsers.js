@@ -1,3 +1,8 @@
+// Load environment variables for local development
+if (!process.env.AzureWebJobsStorage || process.env.NODE_ENV === 'development') {
+    require('dotenv').config();
+}
+
 const { app } = require('@azure/functions');
 const { authenticate, getCorsHeaders, handleCors } = require('../middleware/auth');
 const { getAllUsers } = require('../utils/database');

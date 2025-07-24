@@ -1,3 +1,6 @@
+// Load environment variables first, before importing anything
+require('dotenv').config();
+
 const { generateToken, verifyToken } = require('./src/utils/auth');
 
 // Test direct auth function usage

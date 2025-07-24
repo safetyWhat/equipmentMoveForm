@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Load environment variables first
+require('dotenv').config();
+
 const { createUser } = require('./src/utils/database');
 const { hashPassword, validateEmail, validatePassword, validateRole } = require('./src/utils/auth');
 

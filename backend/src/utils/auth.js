@@ -2,7 +2,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 // Load environment variables for local development
-if (process.env.NODE_ENV !== 'production') {
+// Change the condition to check if we're NOT in Azure Functions
+if (!process.env.AzureWebJobsStorage || process.env.NODE_ENV === 'development') {
     require('dotenv').config();
 }
 

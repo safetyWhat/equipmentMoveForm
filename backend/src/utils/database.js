@@ -1,3 +1,8 @@
+// Load environment variables for local development
+if (!process.env.AzureWebJobsStorage || process.env.NODE_ENV === 'development') {
+    require('dotenv').config();
+}
+
 const { PrismaClient } = require('@prisma/client');
 
 // Initialize Prisma Client
