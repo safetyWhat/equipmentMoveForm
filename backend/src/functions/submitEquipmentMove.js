@@ -1,3 +1,5 @@
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 const { app } = require('@azure/functions');
 
 // Configuration
@@ -128,21 +130,76 @@ async function sendToPowerAutomate(formattedData) {
 // CORS headers
 function getCorsHeaders() {
     return {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'http://localhost:1234',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400'
     };
 }
 
+const AUTH0_DOMAIN = 'dev-35fa67pf2b1sd6co.us.auth0.com'; // Replace with your Auth0 domain
+const AUTH0_AUDIENCE = 'rt56olchMDdpVVZdsQDk7vP2Tr1bHK5f'; // Replace with your Auth0 client ID
+
+// Create JWKS client for Auth0
+const jwks = jwksClient({
+    jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`
+});
+
+function getKey(header, callback) {
+    client.getSigningKey(header.kid, (err, key) => {
+        if (err) {
+            return callback(err);
+        }
+        const signingKey = key.publicKey || key.rsaPublicKey;
+        callback(null, signingKey);
+    });
+}
+
+function verifyToken(token) {
+    return new Promise((resolve, reject) => {
+        jwt.verify(
+            token,
+            getKey,
+            {
+                audience: AUTH0_AUDIENCE,
+                issuer: `https://${AUTH0_DOMAIN}/`,
+                algorithms: ['RS256']
+            },
+            (err, decoded) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(decoded);
+            }
+        );
+    });
+}
+
 app.http('submitEquipmentMove', {
     methods: ['GET', 'POST', 'OPTIONS'],
     authLevel: 'anonymous',
     handler: async (request, context) => {
+		context.log('All Headers:', request.headers);
+        const authHeader = request.headers['Authorization'] || request.headers['authorization'];
+		console.log('Authorization Header:', authHeader);
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return { status: 401, body: 'Unauthorized' };
+        }
+
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = await verifyToken(token);
+            context.log('Authenticated user:', decoded);
+        } catch (err) {
+            context.log.error('Token verification failed:', err);
+            return { status: 401, body: 'Unauthorized' };
+        }
+
         context.log('Equipment Move Form submission received');
         
         // Handle CORS preflight request
         if (request.method === 'OPTIONS') {
+			context.log('CORS preflight request received');
             return {
                 status: 200,
                 headers: getCorsHeaders()

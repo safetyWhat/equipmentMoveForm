@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@auth0/auth0-spa-js": "^2.3.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.15.4"
+  }
+}
