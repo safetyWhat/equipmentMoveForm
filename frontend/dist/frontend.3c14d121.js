@@ -752,9 +752,15 @@ async function submitToAzureFunction(formData) {
         // Try to get token if user is authenticated
         if (auth0) try {
             const isAuthenticated = await auth0.isAuthenticated();
-            if (isAuthenticated) token = await auth0.getTokenSilently();
+            console.log('User is authenticated:', isAuthenticated);
+            if (isAuthenticated) {
+                token = await auth0.getTokenSilently();
+                console.log('Token obtained:', token ? 'Yes' : 'No');
+            } else console.log('User not authenticated, proceeding without token');
         } catch (error) {
             console.warn('Could not get auth token:', error);
+        // For production, you might want to require authentication
+        // throw new Error('Authentication required. Please log in and try again.');
         }
         else console.warn('Auth0 client is not initialized.');
         const files = formData.getAll('photos');
@@ -773,16 +779,23 @@ async function submitToAzureFunction(formData) {
         const headers = {
             'Content-Type': 'application/json'
         };
-        console.log('Headers:', headers);
         // Only add Authorization header if token exists
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+            console.log('Authorization header added');
+        } else console.log('No token available, proceeding without Authorization header');
+        console.log('Request headers:', headers);
+        console.log('Making request to:', CONFIG.AZURE_FUNCTION_URL);
         const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(data)
         });
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
         if (!response.ok) {
             const errorData = await response.text();
+            console.error('Error response:', errorData);
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
         const result = await response.json();

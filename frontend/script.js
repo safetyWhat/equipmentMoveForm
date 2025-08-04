@@ -106,7 +106,7 @@ function hideAllMessages() {
 
 // Submit form data to Azure Function
 async function submitToAzureFunction(formData) {
-	console.log('Submitting form data to Azure Function:', formData);
+    console.log('Submitting form data to Azure Function:', formData);
     try {
         let token = null;
         
@@ -114,15 +114,25 @@ async function submitToAzureFunction(formData) {
         if (auth0) {
             try {
                 const isAuthenticated = await auth0.isAuthenticated();
+                console.log('User is authenticated:', isAuthenticated);
                 if (isAuthenticated) {
                     token = await auth0.getTokenSilently();
+                    console.log('Token obtained:', token ? 'Yes' : 'No');
+                } else {
+                    console.log('User not authenticated, proceeding without token');
+                    // For testing purposes, you might want to require authentication
+                    // throw new Error('Please log in to submit the form');
                 }
             } catch (error) {
                 console.warn('Could not get auth token:', error);
+                // For production, you might want to require authentication
+                // throw new Error('Authentication required. Please log in and try again.');
             }
         } else {
-			console.warn('Auth0 client is not initialized.');
-		}
+            console.warn('Auth0 client is not initialized.');
+            // For production, you might want to require authentication
+            // throw new Error('Authentication system not available. Please refresh the page and try again.');
+        }
 
         const files = formData.getAll('photos');
         const base64Files = await convertFilesToBase64(files);
@@ -142,12 +152,17 @@ async function submitToAzureFunction(formData) {
         const headers = {
             'Content-Type': 'application/json'
         };
-		console.log('Headers:', headers);
 
         // Only add Authorization header if token exists
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+            console.log('Authorization header added');
+        } else {
+            console.log('No token available, proceeding without Authorization header');
         }
+        
+        console.log('Request headers:', headers);
+        console.log('Making request to:', CONFIG.AZURE_FUNCTION_URL);
 
         const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {
             method: 'POST',
@@ -155,8 +170,12 @@ async function submitToAzureFunction(formData) {
             body: JSON.stringify(data)
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
         if (!response.ok) {
             const errorData = await response.text();
+            console.error('Error response:', errorData);
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
 

@@ -146,7 +146,7 @@ const jwks = jwksClient({
 });
 
 function getKey(header, callback) {
-    client.getSigningKey(header.kid, (err, key) => {
+    jwks.getSigningKey(header.kid, (err, key) => {
         if (err) {
             return callback(err);
         }
@@ -179,30 +179,50 @@ app.http('submitEquipmentMove', {
     methods: ['GET', 'POST', 'OPTIONS'],
     authLevel: 'anonymous',
     handler: async (request, context) => {
-		context.log('All Headers:', request.headers);
-        const authHeader = request.headers['Authorization'] || request.headers['authorization'];
-		console.log('Authorization Header:', authHeader);
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return { status: 401, body: 'Unauthorized' };
-        }
-
-        const token = authHeader.split(' ')[1];
-        try {
-            const decoded = await verifyToken(token);
-            context.log('Authenticated user:', decoded);
-        } catch (err) {
-            context.log.error('Token verification failed:', err);
-            return { status: 401, body: 'Unauthorized' };
-        }
-
         context.log('Equipment Move Form submission received');
         
-        // Handle CORS preflight request
+        // Handle CORS preflight request FIRST
         if (request.method === 'OPTIONS') {
-			context.log('CORS preflight request received');
+            context.log('CORS preflight request received');
             return {
                 status: 200,
                 headers: getCorsHeaders()
+            };
+        }
+        
+        // Authentication check (now optional for testing)
+        context.log('All Headers:', request.headers);
+        const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+        context.log('Authorization Header:', authHeader);
+        
+        let authenticatedUser = null;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                const decoded = await verifyToken(token);
+                context.log('Authenticated user:', decoded);
+                authenticatedUser = decoded;
+            } catch (err) {
+                context.log('Token verification failed:', err);
+                return { 
+                    status: 401, 
+                    headers: {
+                        ...getCorsHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ error: 'Invalid token', details: err.message })
+                };
+            }
+        } else {
+            context.log('No authorization header provided - proceeding without authentication');
+            // For production, uncomment the next lines to require authentication:
+            return { 
+                status: 401, 
+                headers: {
+                    ...getCorsHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ error: 'Authorization header required' })
             };
         }
         
@@ -227,7 +247,7 @@ app.http('submitEquipmentMove', {
                 const rawBody = await request.text();
                 requestData = JSON.parse(rawBody);
             } catch (parseError) {
-                context.log.error('Failed to parse request body:', parseError);
+                context.log('Failed to parse request body:', parseError);
                 return {
                     status: 400,
                     headers: {
@@ -254,7 +274,7 @@ app.http('submitEquipmentMove', {
             // Validate the request data
             const validationErrors = validateRequestData(requestData);
             if (validationErrors.length > 0) {
-                context.log.error('Validation errors:', validationErrors);
+                context.log('Validation errors:', validationErrors);
                 return {
                     status: 400,
                     headers: {
@@ -282,12 +302,12 @@ app.http('submitEquipmentMove', {
                     powerAutomateResult = await sendToPowerAutomate(formattedData);
                     context.log('Successfully sent to Power Automate');
                 } catch (powerAutomateError) {
-                    context.log.error('Power Automate error:', powerAutomateError);
+                    context.log('Power Automate error:', powerAutomateError);
                     // Continue processing even if Power Automate fails
                     // You might want to store this in a queue for retry
                 }
             } else {
-                context.log.warn('Power Automate URL not configured - skipping webhook call');
+                context.log('Power Automate URL not configured - skipping webhook call');
             }
             
             // Return success response
@@ -311,7 +331,7 @@ app.http('submitEquipmentMove', {
             };
             
         } catch (error) {
-            context.log.error('Unexpected error:', error);
+            context.log('Unexpected error:', error);
             
             return {
                 status: 500,
