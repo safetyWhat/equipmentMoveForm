@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Function Connection Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .test-section { 
+            background: #f5f5f5; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 5px; 
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Azure Function Connection Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Basic Connectivity</h3>
+        <p>This will test if your Azure Function is running and accepting requests.</p>
+        <button onclick="testConnectivity()">Test Connection</button>
+        <div id="connectivityResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test CORS Preflight</h3>
+        <p>This will test if CORS is properly configured.</p>
+        <button onclick="testCors()">Test CORS</button>
+        <div id="corsResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Form Submission (No Auth)</h3>
+        <p>This will test form submission without authentication.</p>
+        <button onclick="testFormSubmission()">Test Form</button>
+        <div id="formResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Test Auth0 Token Generation</h3>
+        <p>This will test if Auth0 is properly configured and can generate tokens.</p>
+        <button onclick="testAuth0()">Test Auth0</button>
+        <div id="auth0Result"></div>
+    </div>
+
+    <script type="module">
+        import { createAuth0Client } from 'https://cdn.skypack.dev/@auth0/auth0-spa-js';
+        
+        const FUNCTION_URL = 'http://localhost:7071/api/submitEquipmentMove';
+        let auth0Client = null;
+        
+        // Initialize Auth0
+        async function initAuth0() {
+            try {
+                auth0Client = await createAuth0Client({
+                    domain: 'dev-35fa67pf2b1sd6co.us.auth0.com',
+                    clientId: 'rt56olchMDdpVVZdsQDk7vP2Tr1bHK5f',
+                    authorizationParams: {
+                        redirect_uri: window.location.origin,
+                        audience: 'https://equipment-move-api'
+                    }
+                });
+                console.log('Auth0 client initialized');
+            } catch (error) {
+                console.error('Failed to initialize Auth0:', error);
+            }
+        }
+        
+        // Test functions
+        window.testConnectivity = async function() {
+            const resultDiv = document.getElementById('connectivityResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(FUNCTION_URL, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✓ Connection Successful</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>✗ Connection Failed</h4>
+                            <p>Status: ${response.status}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>✗ Connection Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+        
+        window.testCors = async function() {
+            const resultDiv = document.getElementById('corsResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(FUNCTION_URL, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type, Authorization'
+                    }
+                });
+                
+                if (response.ok) {
+                    const corsHeaders = {
+                        'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                        'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                        'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                    };
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✓ CORS Working</h4>
+                            <pre>${JSON.stringify(corsHeaders, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>✗ CORS Failed</h4>
+                            <p>Status: ${response.status}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>✗ CORS Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+        
+        window.testFormSubmission = async function() {
+            const resultDiv = document.getElementById('formResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            const testData = {
+                userName: 'Test User',
+                unitNumber: 'TEST-123',
+                moveDate: '2025-08-05',
+                equipmentHours: 100.5,
+                locationFrom: 'Test Location A',
+                locationTo: 'Test Location B',
+                notes: 'This is a test submission',
+                photos: [],
+                submittedAt: new Date().toISOString()
+            };
+            
+            try {
+                const response = await fetch(FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✓ Form Submission Successful</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>✗ Form Submission Failed</h4>
+                            <p>Status: ${response.status}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>✗ Form Submission Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+        
+        window.testAuth0 = async function() {
+            const resultDiv = document.getElementById('auth0Result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            if (!auth0Client) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>✗ Auth0 Not Initialized</h4>
+                        <p>Auth0 client failed to initialize</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const isAuthenticated = await auth0Client.isAuthenticated();
+                
+                if (isAuthenticated) {
+                    const user = await auth0Client.getUser();
+                    const token = await auth0Client.getTokenSilently({
+                        audience: 'https://equipment-move-api'
+                    });
+                    
+                    // Validate token format
+                    const tokenParts = token.split('.');
+                    const isValidFormat = tokenParts.length === 3;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✓ Auth0 Working</h4>
+                            <p><strong>User:</strong> ${user.email}</p>
+                            <p><strong>Token Format Valid:</strong> ${isValidFormat}</p>
+                            <p><strong>Token Preview:</strong> ${token.substring(0, 50)}...</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>⚠ Not Authenticated</h4>
+                            <p>Please log in first to test Auth0 token generation.</p>
+                            <button onclick="auth0Client.loginWithRedirect()">Login with Auth0</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>✗ Auth0 Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+        
+        // Initialize Auth0 on page load
+        initAuth0();
+        
+        // Handle Auth0 callback
+        if (window.location.search.includes('code=')) {
+            auth0Client.handleRedirectCallback().then(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
+    </script>
+</body>
+</html>

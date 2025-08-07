@@ -116,8 +116,18 @@ async function submitToAzureFunction(formData) {
                 const isAuthenticated = await auth0.isAuthenticated();
                 console.log('User is authenticated:', isAuthenticated);
                 if (isAuthenticated) {
-                    token = await auth0.getTokenSilently();
+                    token = await auth0.getTokenSilently({
+                        audience: 'https://equipment-move-api'
+                    });
                     console.log('Token obtained:', token ? 'Yes' : 'No');
+                    
+                    // Validate token format before using it
+                    if (token && token.split('.').length === 3) {
+                        console.log('Token format is valid');
+                    } else {
+                        console.warn('Token format is invalid, proceeding without token');
+                        token = null;
+                    }
                 } else {
                     console.log('User not authenticated, proceeding without token');
                     // For testing purposes, you might want to require authentication
@@ -125,6 +135,8 @@ async function submitToAzureFunction(formData) {
                 }
             } catch (error) {
                 console.warn('Could not get auth token:', error);
+                // Clear any potentially corrupted token state
+                token = null;
                 // For production, you might want to require authentication
                 // throw new Error('Authentication required. Please log in and try again.');
             }
@@ -247,7 +259,8 @@ async function configureAuth0() {
         domain: 'dev-35fa67pf2b1sd6co.us.auth0.com', // Replace with your Auth0 domain
         clientId: 'rt56olchMDdpVVZdsQDk7vP2Tr1bHK5f', // Replace with your Auth0 client ID
         authorizationParams: {
-            redirect_uri: window.location.origin
+            redirect_uri: window.location.origin,
+            audience: 'https://equipment-move-api' // Add API audience for JWT tokens
         }
     });
 
@@ -257,6 +270,12 @@ async function configureAuth0() {
     if (query.includes('code=') && query.includes('state=')) {
         await auth0.handleRedirectCallback();
         window.history.replaceState({}, document.title, '/'); // Remove query params
+    } else if (query.includes('error=')) {
+        const error = query.split('error=')[1];
+        console.error('Auth0 error:', error);
+		alert(`Authentication error: ${error}`);
+		logout(); // Clear any session state
+		window.history.replaceState({}, document.title, '/'); // Remove query params
     }
 
     // Check if the user is authenticated

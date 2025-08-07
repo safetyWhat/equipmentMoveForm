@@ -130,15 +130,15 @@ async function sendToPowerAutomate(formattedData) {
 // CORS headers
 function getCorsHeaders() {
     return {
-        'Access-Control-Allow-Origin': 'http://localhost:1234',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*', // For testing - restrict this in production
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400'
     };
 }
 
 const AUTH0_DOMAIN = 'dev-35fa67pf2b1sd6co.us.auth0.com'; // Replace with your Auth0 domain
-const AUTH0_AUDIENCE = 'rt56olchMDdpVVZdsQDk7vP2Tr1bHK5f'; // Replace with your Auth0 client ID
+const AUTH0_AUDIENCE = 'https://equipment-move-api'; // Replace with your Auth0 API identifier (not client ID)
 
 // Create JWKS client for Auth0
 const jwks = jwksClient({
@@ -190,32 +190,78 @@ app.http('submitEquipmentMove', {
             };
         }
         
+        // Handle GET requests for testing connectivity
+        if (request.method === 'GET') {
+            context.log('GET request received - returning status');
+            return {
+                status: 200,
+                headers: {
+                    ...getCorsHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: 'Azure Function is running',
+                    timestamp: new Date().toISOString(),
+                    authRequired: false // Set to true when auth is enabled
+                })
+            };
+        }
+        
         // Authentication check (now optional for testing)
         context.log('All Headers:', request.headers);
         const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
-        context.log('Authorization Header:', authHeader);
+        context.log('Authorization Header:', authHeader ? 'Present' : 'Not present');
         
         let authenticatedUser = null;
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
-            try {
-                const decoded = await verifyToken(token);
-                context.log('Authenticated user:', decoded);
-                authenticatedUser = decoded;
-            } catch (err) {
-                context.log('Token verification failed:', err);
+            
+            // Basic token format validation
+            if (!token || token.split('.').length !== 3) {
+                context.log('Invalid token format - not a valid JWT structure');
                 return { 
                     status: 401, 
                     headers: {
                         ...getCorsHeaders(),
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ error: 'Invalid token', details: err.message })
+                    body: JSON.stringify({ error: 'Invalid token format' })
                 };
             }
+            
+            try {
+                const decoded = await verifyToken(token);
+                context.log('Authenticated user:', decoded);
+                authenticatedUser = decoded;
+            } catch (err) {
+                context.log('Token verification failed:', err.message);
+                return { 
+                    status: 401, 
+                    headers: {
+                        ...getCorsHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        error: 'Invalid or expired token', 
+                        details: process.env.NODE_ENV === 'development' ? err.message : 'Please log in again'
+                    })
+                };
+            }
+        } else if (authHeader) {
+            // Invalid authorization header format
+            context.log('Invalid authorization header format');
+            return { 
+                status: 401, 
+                headers: {
+                    ...getCorsHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ error: 'Invalid authorization header format. Expected: Bearer <token>' })
+            };
         } else {
             context.log('No authorization header provided - proceeding without authentication');
             // For production, uncomment the next lines to require authentication:
+            /*
             return { 
                 status: 401, 
                 headers: {
@@ -224,6 +270,7 @@ app.http('submitEquipmentMove', {
                 },
                 body: JSON.stringify({ error: 'Authorization header required' })
             };
+            */
         }
         
         // Only allow POST for actual submissions
