@@ -202,7 +202,7 @@ app.http('submitEquipmentMove', {
                 body: JSON.stringify({
                     status: 'Azure Function is running',
                     timestamp: new Date().toISOString(),
-                    authRequired: false // Set to true when auth is enabled
+                    authRequired: true // Set to true when auth is enabled
                 })
             };
         }
@@ -261,7 +261,6 @@ app.http('submitEquipmentMove', {
         } else {
             context.log('No authorization header provided - proceeding without authentication');
             // For production, uncomment the next lines to require authentication:
-            /*
             return { 
                 status: 401, 
                 headers: {
@@ -270,7 +269,6 @@ app.http('submitEquipmentMove', {
                 },
                 body: JSON.stringify({ error: 'Authorization header required' })
             };
-            */
         }
         
         // Only allow POST for actual submissions
