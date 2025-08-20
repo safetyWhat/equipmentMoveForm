@@ -137,8 +137,8 @@ function getCorsHeaders() {
     };
 }
 
-const AUTH0_DOMAIN = 'dev-35fa67pf2b1sd6co.us.auth0.com'; // Replace with your Auth0 domain
-const AUTH0_AUDIENCE = 'https://equipment-move-api'; // Replace with your Auth0 API identifier (not client ID)
+const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN; // Replace with your Auth0 domain
+const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE; // Replace with your Auth0 API identifier (not client ID)
 
 // Create JWKS client for Auth0
 const jwks = jwksClient({
