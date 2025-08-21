@@ -1,3 +1,6 @@
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+}
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const { app } = require('@azure/functions');
