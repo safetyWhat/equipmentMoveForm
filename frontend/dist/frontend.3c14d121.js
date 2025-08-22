@@ -850,6 +850,8 @@ async function handleFormSubmit(event) {
         // Re-enable form
         submitButton.disabled = false;
         submitButton.textContent = 'Submit Equipment Move';
+        // Reset user information by reconfiguring Auth0
+        configureAuth0();
     }
 }
 // Auth0 configuration
@@ -881,9 +883,10 @@ async function configureAuth0() {
     if (isAuthenticated) {
         const user = await auth0.getUser();
         console.log('User:', user);
-        document.getElementById('userEmail').textContent = `Logged in as: ${user.email}`;
+        document.getElementById('userEmail').innerText = `Logged in as: ${user.email}`;
         document.getElementById('loginButton').style.display = 'none';
         document.getElementById('logoutButton').style.display = 'block';
+        document.getElementById('userName').value = user.name;
         return;
     }
     // Show login button if not authenticated

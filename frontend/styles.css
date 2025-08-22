@@ -38,8 +38,16 @@ header p {
     font-size: 1.1em;
 }
 
+.text {
+	padding: 0px 0px 10px 0px;
+}
+
 .form-container {
-    padding: 40px;
+    padding: 25px 40px 40px 40px;
+}
+
+.login-container {
+	padding: 10px 40px 0px 40px;
 }
 
 .form-group {
@@ -94,6 +102,23 @@ small {
     margin-top: 5px;
     color: #666;
     font-size: 0.9em;
+}
+
+.log-btn {
+    width: 100%;
+    padding: 12px;
+    background: #4facfe;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.log-btn:hover {
+    background: #3a9fd5;
 }
 
 .submit-btn {
@@ -187,9 +212,13 @@ small {
     header h1 {
         font-size: 1.8em;
     }
+
+	.login-container {
+	padding: 10px 20px 0px 20px;
+}
     
     .form-container {
-        padding: 30px 20px;
+        padding: 20px 20px;
     }
     
     input[type="text"],

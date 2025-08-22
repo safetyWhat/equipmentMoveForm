@@ -38,8 +38,16 @@ header p {
   font-size: 1.1em;
 }
 
+.text {
+  padding: 0 0 10px;
+}
+
 .form-container {
-  padding: 40px;
+  padding: 25px 40px 40px;
+}
+
+.login-container {
+  padding: 10px 40px 0;
 }
 
 .form-group {
@@ -86,6 +94,23 @@ small {
   margin-top: 5px;
   font-size: .9em;
   display: block;
+}
+
+.log-btn {
+  color: #fff;
+  cursor: pointer;
+  background: #4facfe;
+  border: none;
+  border-radius: 8px;
+  width: 100%;
+  padding: 12px;
+  font-size: 1em;
+  font-weight: 600;
+  transition: background .3s;
+}
+
+.log-btn:hover {
+  background: #3a9fd5;
 }
 
 .submit-btn {
@@ -182,8 +207,12 @@ small {
     font-size: 1.8em;
   }
 
+  .login-container {
+    padding: 10px 20px 0;
+  }
+
   .form-container {
-    padding: 30px 20px;
+    padding: 20px;
   }
 
   input[type="text"], input[type="date"], input[type="number"], textarea, input[type="file"] {
