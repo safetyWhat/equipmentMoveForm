@@ -34,7 +34,7 @@ equipmentMoveForm/
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) (v18 or later)
+1. [Node.js](https://nodejs.org/) (v18 or v20)
 2. [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
 3. [Azure Account](https://azure.microsoft.com/free/) (for deployment)
 

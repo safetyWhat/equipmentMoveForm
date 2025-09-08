@@ -1,5 +1,3 @@
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
 const { app } = require('@azure/functions');
 
 // Configuration
@@ -130,49 +128,11 @@ async function sendToPowerAutomate(formattedData) {
 // CORS headers
 function getCorsHeaders() {
     return {
-        'Access-Control-Allow-Origin': '*', // For testing - restrict this in production
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400'
     };
-}
-
-const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN; // Replace with your Auth0 domain
-const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE; // Replace with your Auth0 API identifier (not client ID)
-
-// Create JWKS client for Auth0
-const jwks = jwksClient({
-    jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`
-});
-
-function getKey(header, callback) {
-    jwks.getSigningKey(header.kid, (err, key) => {
-        if (err) {
-            return callback(err);
-        }
-        const signingKey = key.publicKey || key.rsaPublicKey;
-        callback(null, signingKey);
-    });
-}
-
-function verifyToken(token) {
-    return new Promise((resolve, reject) => {
-        jwt.verify(
-            token,
-            getKey,
-            {
-                audience: AUTH0_AUDIENCE,
-                issuer: `https://${AUTH0_DOMAIN}/`,
-                algorithms: ['RS256']
-            },
-            (err, decoded) => {
-                if (err) {
-                    return reject(err);
-                }
-                resolve(decoded);
-            }
-        );
-    });
 }
 
 app.http('submitEquipmentMove', {
@@ -181,93 +141,11 @@ app.http('submitEquipmentMove', {
     handler: async (request, context) => {
         context.log('Equipment Move Form submission received');
         
-        // Handle CORS preflight request FIRST
+        // Handle CORS preflight request
         if (request.method === 'OPTIONS') {
-            context.log('CORS preflight request received');
             return {
                 status: 200,
                 headers: getCorsHeaders()
-            };
-        }
-        
-        // Handle GET requests for testing connectivity
-        if (request.method === 'GET') {
-            context.log('GET request received - returning status');
-            return {
-                status: 200,
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    status: 'Azure Function is running',
-                    timestamp: new Date().toISOString(),
-                    authRequired: true // Set to true when auth is enabled
-                })
-            };
-        }
-        
-        // Authentication check (now optional for testing)
-        context.log('All Headers:', request.headers);
-        const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
-        context.log('Authorization Header:', authHeader ? 'Present' : 'Not present');
-        
-        let authenticatedUser = null;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            
-            // Basic token format validation
-            if (!token || token.split('.').length !== 3) {
-                context.log('Invalid token format - not a valid JWT structure');
-                return { 
-                    status: 401, 
-                    headers: {
-                        ...getCorsHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ error: 'Invalid token format' })
-                };
-            }
-            
-            try {
-                const decoded = await verifyToken(token);
-                context.log('Authenticated user:', decoded);
-                authenticatedUser = decoded;
-            } catch (err) {
-                context.log('Token verification failed:', err.message);
-                return { 
-                    status: 401, 
-                    headers: {
-                        ...getCorsHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        error: 'Invalid or expired token', 
-                        details: process.env.NODE_ENV === 'development' ? err.message : 'Please log in again'
-                    })
-                };
-            }
-        } else if (authHeader) {
-            // Invalid authorization header format
-            context.log('Invalid authorization header format');
-            return { 
-                status: 401, 
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ error: 'Invalid authorization header format. Expected: Bearer <token>' })
-            };
-        } else {
-            context.log('No authorization header provided - proceeding without authentication');
-            // For production, uncomment the next lines to require authentication:
-            return { 
-                status: 401, 
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ error: 'Authorization header required' })
             };
         }
         
@@ -292,7 +170,7 @@ app.http('submitEquipmentMove', {
                 const rawBody = await request.text();
                 requestData = JSON.parse(rawBody);
             } catch (parseError) {
-                context.log('Failed to parse request body:', parseError);
+                context.log.error('Failed to parse request body:', parseError);
                 return {
                     status: 400,
                     headers: {
@@ -319,7 +197,7 @@ app.http('submitEquipmentMove', {
             // Validate the request data
             const validationErrors = validateRequestData(requestData);
             if (validationErrors.length > 0) {
-                context.log('Validation errors:', validationErrors);
+                context.log.error('Validation errors:', validationErrors);
                 return {
                     status: 400,
                     headers: {
@@ -347,12 +225,12 @@ app.http('submitEquipmentMove', {
                     powerAutomateResult = await sendToPowerAutomate(formattedData);
                     context.log('Successfully sent to Power Automate');
                 } catch (powerAutomateError) {
-                    context.log('Power Automate error:', powerAutomateError);
+                    context.log.error('Power Automate error:', powerAutomateError);
                     // Continue processing even if Power Automate fails
                     // You might want to store this in a queue for retry
                 }
             } else {
-                context.log('Power Automate URL not configured - skipping webhook call');
+                context.log.warn('Power Automate URL not configured - skipping webhook call');
             }
             
             // Return success response
@@ -376,7 +254,7 @@ app.http('submitEquipmentMove', {
             };
             
         } catch (error) {
-            context.log('Unexpected error:', error);
+            context.log.error('Unexpected error:', error);
             
             return {
                 status: 500,

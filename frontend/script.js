@@ -1,5 +1,3 @@
-import { createAuth0Client } from '@auth0/auth0-spa-js';
-
 // Configuration
 const CONFIG = {
     // Replace this with your Azure Function URL when deployed
@@ -106,94 +104,39 @@ function hideAllMessages() {
 
 // Submit form data to Azure Function
 async function submitToAzureFunction(formData) {
-    console.log('Submitting form data to Azure Function:', formData);
     try {
-        let token = null;
-        
-        // Try to get token if user is authenticated
-        if (auth0) {
-            try {
-                const isAuthenticated = await auth0.isAuthenticated();
-                console.log('User is authenticated:', isAuthenticated);
-                if (isAuthenticated) {
-                    token = await auth0.getTokenSilently({
-                        audience: 'https://equipment-move-api'
-                    });
-                    console.log('Token obtained:', token ? 'Yes' : 'No');
-                    
-                    // Validate token format before using it
-                    if (token && token.split('.').length === 3) {
-                        console.log('Token format is valid');
-                    } else {
-                        console.warn('Token format is invalid, proceeding without token');
-                        token = null;
-                    }
-                } else {
-                    console.log('User not authenticated, proceeding without token');
-                    // For testing purposes, you might want to require authentication
-                    // throw new Error('Please log in to submit the form');
-                }
-            } catch (error) {
-                console.warn('Could not get auth token:', error);
-                // Clear any potentially corrupted token state
-                token = null;
-                // For production, you might want to require authentication
-                // throw new Error('Authentication required. Please log in and try again.');
-            }
-        } else {
-            console.warn('Auth0 client is not initialized.');
-            // For production, you might want to require authentication
-            // throw new Error('Authentication system not available. Please refresh the page and try again.');
-        }
-
+        // Convert form data to JSON object
         const files = formData.getAll('photos');
         const base64Files = await convertFilesToBase64(files);
-
+        
         const data = {
             userName: formData.get('userName').trim(),
             unitNumber: formData.get('unitNumber').trim(),
             moveDate: formData.get('moveDate'),
             equipmentHours: parseFloat(formData.get('equipmentHours')),
-            locationFrom: formData.get('locationFrom').trim(),
-            locationTo: formData.get('locationTo').trim(),
+			locationFrom: formData.get('locationFrom').trim(),
+			locationTo: formData.get('locationTo').trim(),
             notes: formData.get('notes').trim() || '',
             photos: base64Files,
             submittedAt: new Date().toISOString()
         };
-
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-
-        // Only add Authorization header if token exists
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-            console.log('Authorization header added');
-        } else {
-            console.log('No token available, proceeding without Authorization header');
-        }
         
-        console.log('Request headers:', headers);
-        console.log('Making request to:', CONFIG.AZURE_FUNCTION_URL);
-
         const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {
             method: 'POST',
-            headers: headers,
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(data)
         });
-
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-
+        
         if (!response.ok) {
             const errorData = await response.text();
-            console.error('Error response:', errorData);
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
-
+        
         const result = await response.json();
         return result;
-
+        
     } catch (error) {
         console.error('Error submitting to Azure Function:', error);
         throw error;
@@ -202,7 +145,6 @@ async function submitToAzureFunction(formData) {
 
 // Handle form submission
 async function handleFormSubmit(event) {
-	console.log('Form submitted:', event);
     event.preventDefault();
     
     // Hide all messages and show loading
@@ -224,7 +166,6 @@ async function handleFormSubmit(event) {
         }
         
         // Submit to Azure Function
-		console.log('Form data before submission:', Object.fromEntries(formData.entries()));
         const result = await submitToAzureFunction(formData);
         
         // Show success message
@@ -250,69 +191,6 @@ async function handleFormSubmit(event) {
         submitButton.textContent = 'Submit Equipment Move';
     }
 }
-
-// Auth0 configuration
-let auth0 = null;
-
-async function configureAuth0() {
-    auth0 = await createAuth0Client({
-        domain: 'dev-35fa67pf2b1sd6co.us.auth0.com', // Replace with your Auth0 domain
-        clientId: 'rt56olchMDdpVVZdsQDk7vP2Tr1bHK5f', // Replace with your Auth0 client ID
-        authorizationParams: {
-            redirect_uri: window.location.origin,
-            audience: 'https://equipment-move-api' // Add API audience for JWT tokens
-        }
-    });
-
-    // Check if the user is returning from Auth0 login
-    const query = window.location.search;
-	console.log('Query params:', query);
-    if (query.includes('code=') && query.includes('state=')) {
-        await auth0.handleRedirectCallback();
-        window.history.replaceState({}, document.title, '/'); // Remove query params
-    } else if (query.includes('error=')) {
-        const error = query.split('error=')[1];
-        console.error('Auth0 error:', error);
-		alert(`Authentication error: ${error}`);
-		logout(); // Clear any session state
-		window.history.replaceState({}, document.title, '/'); // Remove query params
-    }
-
-    // Check if the user is authenticated
-    const isAuthenticated = await auth0.isAuthenticated();
-    if (isAuthenticated) {
-        const user = await auth0.getUser();
-        console.log('User:', user);
-        document.getElementById('userEmail').textContent = `Logged in as: ${user.email}`;
-        document.getElementById('loginButton').style.display = 'none';
-        document.getElementById('logoutButton').style.display = 'block';
-        return;
-    }
-
-    // Show login button if not authenticated
-    document.getElementById('loginButton').style.display = 'block';
-}
-
-async function login() {
-    await auth0.loginWithRedirect();
-}
-
-async function logout() {
-    await auth0.logout({
-        logoutParams: {
-            returnTo: window.location.origin
-        }
-    });
-}
-
-document.getElementById('loginButton').addEventListener('click', () => {
-	login();
-	console.log('Login button clicked');
-});
-document.getElementById('logoutButton').addEventListener('click', logout);
-
-// Initialize Auth0 on page load
-window.onload = configureAuth0;
 
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
@@ -354,4 +232,3 @@ if (typeof module !== 'undefined' && module.exports) {
         submitToAzureFunction
     };
 }
-console.log(typeof createAuth0Client); // Should log "function"
