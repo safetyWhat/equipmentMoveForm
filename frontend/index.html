@@ -5,13 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipment Move Form</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth-styles.css">
 </head>
 <body>
+    <!-- Authentication Header -->
+    <div class="auth-header">
+        <div class="auth-status" id="authStatus" style="display: none;">
+            <div class="user-info" id="userInfo">Loading...</div>
+            <button class="logout-button" id="logoutButton">Logout</button>
+        </div>
+        <div class="auth-loading" id="authLoading">
+            Checking authentication...
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>Equipment Move Form</h1>
             <p>Please fill out the details of the equipment move</p>
         </header>
+
+        <!-- Loading Spinner -->
+        <div class="loading" id="loadingSpinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Submitting your request...</p>
+        </div>
+        
+        <!-- Success Message -->
+        <div class="message success" id="successMessage" style="display: none;">
+            <h3>✓ Success!</h3>
+            <p>Your equipment move form has been submitted successfully.</p>
+        </div>
+        
+        <!-- Error Message -->
+        <div class="message error" id="errorMessage" style="display: none;">
+            <h3>✗ Error</h3>
+            <p id="errorText">There was an error submitting your form. Please try again.</p>
+        </div>
 
         <form id="equipmentForm" class="form-container">
             <div class="form-group">
@@ -57,23 +87,10 @@
 
             <button type="submit" class="submit-btn">Submit Equipment Move</button>
         </form>
-
-        <div id="loadingSpinner" class="loading hidden">
-            <div class="spinner"></div>
-            <p>Submitting form...</p>
-        </div>
-
-        <div id="successMessage" class="message success hidden">
-            <h3>✓ Form Submitted Successfully!</h3>
-            <p>Your equipment move has been recorded.</p>
-        </div>
-
-        <div id="errorMessage" class="message error hidden">
-            <h3>✗ Submission Failed</h3>
-            <p id="errorText">There was an error submitting your form. Please try again.</p>
-        </div>
     </div>
-
+    
+    <!-- Include Auth Manager and Main Script -->
+    <script src="auth-manager.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

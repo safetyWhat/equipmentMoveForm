@@ -1,10 +1,14 @@
+// Equipment Move Form with Authentication
 // Configuration
 const CONFIG = {
-    // Replace this with your Azure Function URL when deployed
+    // Azure Function URLs will be set based on authentication
     AZURE_FUNCTION_URL: 'http://localhost:7071/api/submitEquipmentMove',
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
+
+// Global auth manager instance
+let authManager;
 
 // DOM Elements
 const form = document.getElementById('equipmentForm');
@@ -12,6 +16,121 @@ const loadingSpinner = document.getElementById('loadingSpinner');
 const successMessage = document.getElementById('successMessage');
 const errorMessage = document.getElementById('errorMessage');
 const errorText = document.getElementById('errorText');
+
+// Authentication UI elements
+const authStatus = document.getElementById('authStatus');
+const authLoading = document.getElementById('authLoading');
+const userInfo = document.getElementById('userInfo');
+const logoutButton = document.getElementById('logoutButton');
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize auth manager
+    authManager = new AuthManager();
+    
+    // Check authentication status
+    await checkAuthStatus();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Listen for auth state changes
+    window.addEventListener('authStateChanged', handleAuthStateChange);
+});
+
+// Check authentication status
+async function checkAuthStatus() {
+    if (authLoading) {
+        authLoading.style.display = 'block';
+    }
+    
+    const isValid = await authManager.validateToken();
+    
+    if (authLoading) {
+        authLoading.style.display = 'none';
+    }
+    
+    if (!isValid) {
+        // Redirect to auth page if not authenticated
+        window.location.href = 'auth.html';
+        return;
+    }
+    
+    // Update UI with user info
+    updateAuthUI(authManager.getCurrentUser());
+}
+
+// Handle auth state changes
+function handleAuthStateChange(event) {
+    const { authenticated, user } = event.detail;
+    
+    if (!authenticated) {
+        // Redirect to auth page
+        window.location.href = 'auth.html';
+    } else {
+        updateAuthUI(user);
+    }
+}
+
+// Update authentication UI
+function updateAuthUI(user) {
+    if (user && userInfo && authStatus && authLoading) {
+        userInfo.textContent = `Welcome, ${user.name}`;
+        authStatus.style.display = 'block';
+        authLoading.style.display = 'none';
+    }
+}
+
+// Set up event listeners
+function setupEventListeners() {
+    // Form submission
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+    }
+    
+    // Logout button
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+    
+    // Add real-time validation for file inputs
+    const fileInput = document.getElementById('photos');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            let hasErrors = false;
+            
+            files.forEach(file => {
+                if (file.size > CONFIG.MAX_FILE_SIZE) {
+                    alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+                    hasErrors = true;
+                }
+                
+                if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+                    alert(`File ${file.name} is not a valid image format. Please select JPEG, PNG, or GIF files.`);
+                    hasErrors = true;
+                }
+            });
+            
+            if (hasErrors) {
+                event.target.value = ''; // Clear the input
+            }
+        });
+    }
+    
+    // Set today's date as default for move date
+    const moveDateInput = document.getElementById('moveDate');
+    if (moveDateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        moveDateInput.value = today;
+    }
+}
+
+// Handle logout
+function handleLogout() {
+    authManager.logout();
+    // Auth state change event will handle redirect
+}
 
 // Form validation
 function validateForm(formData) {
@@ -89,11 +208,15 @@ async function convertFilesToBase64(files) {
 
 // Show/hide elements
 function showElement(element) {
-    element.classList.remove('hidden');
+    if (element) {
+        element.style.display = 'block';
+    }
 }
 
 function hideElement(element) {
-    element.classList.add('hidden');
+    if (element) {
+        element.style.display = 'none';
+    }
 }
 
 function hideAllMessages() {
@@ -102,50 +225,54 @@ function hideAllMessages() {
     hideElement(errorMessage);
 }
 
-// Submit form data to Azure Function
-async function submitToAzureFunction(formData) {
+// Submit form data using AuthManager
+async function submitFormWithAuth(formData) {
     try {
-        // Convert form data to JSON object
-        const files = formData.getAll('photos');
-        const base64Files = await convertFilesToBase64(files);
+        // Convert FormData to plain object
+        const dataObject = {};
         
-        const data = {
-            userName: formData.get('userName').trim(),
-            unitNumber: formData.get('unitNumber').trim(),
-            moveDate: formData.get('moveDate'),
-            equipmentHours: parseFloat(formData.get('equipmentHours')),
-			locationFrom: formData.get('locationFrom').trim(),
-			locationTo: formData.get('locationTo').trim(),
-            notes: formData.get('notes').trim() || '',
-            photos: base64Files,
-            submittedAt: new Date().toISOString()
-        };
-        
-        const response = await fetch(CONFIG.AZURE_FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorData}`);
+        // Extract form fields
+        for (const [key, value] of formData.entries()) {
+            if (key !== 'photos') {
+                dataObject[key] = value.trim ? value.trim() : value;
+            }
         }
         
-        const result = await response.json();
-        return result;
+        // Convert files to base64
+        const files = formData.getAll('photos');
+        if (files && files.length > 0) {
+            dataObject.photos = await convertFilesToBase64(files);
+        }
+        
+        // Parse numeric fields
+        if (dataObject.equipmentHours) {
+            dataObject.equipmentHours = parseFloat(dataObject.equipmentHours);
+        }
+        
+        // Submit using auth manager
+        const result = await authManager.submitEquipmentMove(dataObject);
+        
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || 'Form submission failed');
+        }
         
     } catch (error) {
-        console.error('Error submitting to Azure Function:', error);
+        console.error('Form submission error:', error);
         throw error;
     }
 }
 
-// Handle form submission
+// Handle form submission (updated to use authentication)
 async function handleFormSubmit(event) {
     event.preventDefault();
+    
+    // Check authentication first
+    if (!authManager.isAuthenticated()) {
+        window.location.href = 'auth.html';
+        return;
+    }
     
     // Hide all messages and show loading
     hideAllMessages();
@@ -153,6 +280,7 @@ async function handleFormSubmit(event) {
     
     // Disable form
     const submitButton = form.querySelector('.submit-btn');
+    const originalText = submitButton.textContent;
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     
@@ -165,63 +293,61 @@ async function handleFormSubmit(event) {
             throw new Error(validationErrors.join(', '));
         }
         
-        // Submit to Azure Function
-        const result = await submitToAzureFunction(formData);
+        // Submit to Azure Function with authentication
+        const result = await submitFormWithAuth(formData);
         
         // Show success message
         hideElement(loadingSpinner);
         showElement(successMessage);
         
+        // Update success message with submission details
+        if (result && result.submissionId) {
+            const successText = successMessage.querySelector('p');
+            if (successText) {
+                successText.textContent = `Form submitted successfully! Submission ID: ${result.submissionId}`;
+            }
+        }
+        
         // Reset form
         form.reset();
+        
+        // Reset date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('moveDate').value = today;
         
         console.log('Form submitted successfully:', result);
         
     } catch (error) {
         console.error('Form submission error:', error);
         
+        // Handle authentication errors
+        if (error.message.includes('Session expired') || error.message.includes('Not authenticated')) {
+            window.location.href = 'auth.html';
+            return;
+        }
+        
         // Show error message
         hideElement(loadingSpinner);
-        errorText.textContent = error.message || 'An unexpected error occurred. Please try again.';
+        if (errorText) {
+            errorText.textContent = error.message || 'An unexpected error occurred. Please try again.';
+        }
         showElement(errorMessage);
         
     } finally {
         // Re-enable form
         submitButton.disabled = false;
-        submitButton.textContent = 'Submit Equipment Move';
+        submitButton.textContent = originalText;
     }
 }
 
-// Add event listeners
-document.addEventListener('DOMContentLoaded', function() {
-    form.addEventListener('submit', handleFormSubmit);
-    
-    // Add real-time validation for file inputs
-    const fileInput = document.getElementById('photos');
-    fileInput.addEventListener('change', function(event) {
-        const files = Array.from(event.target.files);
-        let hasErrors = false;
-        
-        files.forEach(file => {
-            if (file.size > CONFIG.MAX_FILE_SIZE) {
-                alert(`File ${file.name} is too large. Maximum size is 10MB.`);
-                hasErrors = true;
-            }
-            
-            if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-                alert(`File ${file.name} is not a valid image format. Please select JPEG, PNG, or GIF files.`);
-                hasErrors = true;
-            }
-        });
-        
-        if (hasErrors) {
-            event.target.value = ''; // Clear the input
-        }
-    });
-    
-    // Set today's date as default for move date
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('moveDate').value = today;
+// Add global error handler for authentication errors
+window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.message && 
+        (event.reason.message.includes('Session expired') || 
+         event.reason.message.includes('Not authenticated'))) {
+        event.preventDefault();
+        window.location.href = 'auth.html';
+    }
 });
 
 // Export for testing (if needed)
@@ -229,6 +355,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         validateForm,
         convertFilesToBase64,
-        submitToAzureFunction
+        submitFormWithAuth
     };
 }
