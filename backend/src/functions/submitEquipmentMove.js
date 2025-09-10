@@ -1,4 +1,8 @@
 const { app } = require('@azure/functions');
+const { PrismaClient } = require('@prisma/client');
+const { verifyJWT, createUnauthorizedResponse, getCorsHeaders } = require('../utils/authMiddleware');
+
+const prisma = new PrismaClient();
 
 // Configuration
 const CONFIG = {
@@ -64,13 +68,16 @@ function validateRequestData(data) {
     return errors;
 }
 
-// Format data for Power Automate
-function formatDataForPowerAutomate(data) {
+// Format data for Power Automate and database
+function formatDataForPowerAutomate(data, user) {
     return {
         submissionId: generateSubmissionId(),
         timestamp: new Date().toISOString(),
         userDetails: {
-            name: data.userName.trim(),
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            submittedBy: data.userName?.trim() || user.name
         },
         equipmentDetails: {
             unitNumber: data.unitNumber.trim(),
@@ -125,6 +132,34 @@ async function sendToPowerAutomate(formattedData) {
     }
 }
 
+// Save form data to database
+async function saveToDatabase(formattedData, user, context) {
+    try {
+        const equipmentMove = await prisma.equipmentMove.create({
+            data: {
+                submissionId: formattedData.submissionId,
+                userId: user.id,
+                unitNumber: formattedData.equipmentDetails.unitNumber,
+                moveDate: new Date(formattedData.equipmentDetails.moveDate),
+                hours: formattedData.equipmentDetails.hours,
+                locationFrom: formattedData.equipmentDetails.locationFrom,
+                locationTo: formattedData.equipmentDetails.locationTo,
+                notes: formattedData.equipmentDetails.notes || null,
+                photos: formattedData.photos.length > 0 ? JSON.stringify(formattedData.photos) : null
+            }
+        });
+        
+        context.log(`Equipment move saved to database: ${equipmentMove.id}`);
+        return equipmentMove;
+        
+    } catch (error) {
+        context.log.error('Database save error:', error);
+        throw new Error(`Failed to save to database: ${error.message}`);
+    } finally {
+        await prisma.$disconnect();
+    }
+}
+
 // CORS headers
 function getCorsHeaders() {
     return {
@@ -162,6 +197,15 @@ app.http('submitEquipmentMove', {
                 })
             };
         }
+
+        // Authenticate user
+        const authResult = await verifyJWT(request, context);
+        if (!authResult.success) {
+            return createUnauthorizedResponse(authResult.error);
+        }
+
+        const user = authResult.user;
+        context.log(`Authenticated user: ${user.email} submitting equipment move form`);
         
         try {
             // Parse request body
@@ -211,12 +255,33 @@ app.http('submitEquipmentMove', {
                 };
             }
             
-            // Format data for Power Automate
-            const formattedData = formatDataForPowerAutomate(requestData);
+            // Format data for Power Automate and database
+            const formattedData = formatDataForPowerAutomate(requestData, user);
             context.log('Formatted data for Power Automate:', {
                 submissionId: formattedData.submissionId,
-                timestamp: formattedData.timestamp
+                timestamp: formattedData.timestamp,
+                userId: user.id
             });
+            
+            // Save to database first
+            let databaseResult = null;
+            try {
+                databaseResult = await saveToDatabase(formattedData, user, context);
+                context.log('Successfully saved to database');
+            } catch (databaseError) {
+                context.log.error('Database save error:', databaseError);
+                return {
+                    status: 500,
+                    headers: {
+                        ...getCorsHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        error: 'Failed to save form data',
+                        details: databaseError.message
+                    })
+                };
+            }
             
             // Send to Power Automate (if URL is configured)
             let powerAutomateResult = null;
@@ -239,7 +304,13 @@ app.http('submitEquipmentMove', {
                 submissionId: formattedData.submissionId,
                 timestamp: formattedData.timestamp,
                 message: 'Equipment move form submitted successfully',
-                powerAutomateStatus: powerAutomateResult ? 'sent' : 'skipped'
+                databaseId: databaseResult?.id,
+                powerAutomateStatus: powerAutomateResult ? 'sent' : 'skipped',
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email
+                }
             };
             
             context.log('Form submission completed successfully:', response);

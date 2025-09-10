@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+model User {
+    id        String   @id @default(cuid())
+    email     String   @unique
+    password  String
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Equipment move submissions relationship
+    equipmentMoves EquipmentMove[]
+
+    @@map("users")
+}
+
+model EquipmentMove {
+    id           String   @id @default(cuid())
+    submissionId String   @unique
+    userId       String
+    unitNumber   String
+    moveDate     DateTime
+    hours        Float
+    locationFrom String
+    locationTo   String
+    notes        String?
+    photos       String? // JSON string of photo data
+    createdAt    DateTime @default(now())
+
+    // Relationship
+    user User @relation(fields: [userId], references: [id])
+
+    @@map("equipment_moves")
+}
