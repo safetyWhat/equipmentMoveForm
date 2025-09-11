@@ -74,10 +74,17 @@ function handleAuthStateChange(event) {
 
 // Update authentication UI
 function updateAuthUI(user) {
+	console.log('Authenticated user:', user);
     if (user && userInfo && authStatus && authLoading) {
         userInfo.textContent = `Welcome, ${user.name}`;
         authStatus.style.display = 'block';
         authLoading.style.display = 'none';
+        
+        // Show admin button for admin users
+        const adminButton = document.getElementById('adminButton');
+        if (adminButton && user.type === 'admin') {
+            adminButton.style.display = 'block';
+        }
     }
 }
 

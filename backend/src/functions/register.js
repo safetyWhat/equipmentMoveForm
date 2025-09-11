@@ -1,7 +1,7 @@
 const { app } = require('@azure/functions');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
-const { generateToken, getCorsHeaders } = require('../utils/authMiddleware');
+const { generateToken, getCorsHeaders, verifyJWT } = require('../utils/authMiddleware');
 
 const prisma = new PrismaClient();
 
@@ -11,7 +11,7 @@ app.http('register', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     handler: async (request, context) => {
-        context.log('User registration request received');
+        context.log('Admin user registration request received');
         
         // Handle CORS preflight request
         if (request.method === 'OPTIONS') {
@@ -22,6 +22,29 @@ app.http('register', {
         }
 
         try {
+            // Verify admin authentication
+            const authResult = await verifyJWT(request, context);
+            if (!authResult.success) {
+                return {
+                    status: authResult.status,
+                    headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: authResult.error })
+                };
+            }
+
+            // Check if user is admin
+            const adminUser = await prisma.user.findUnique({
+                where: { id: authResult.userId }
+            });
+
+            if (!adminUser || adminUser.type !== 'admin') {
+                return {
+                    status: 403,
+                    headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: 'Access denied. Admin privileges required.' })
+                };
+            }
+
             // Parse request body
             let requestData;
             try {
@@ -36,7 +59,7 @@ app.http('register', {
                 };
             }
 
-            const { email, password, name, rememberMe = false } = requestData;
+            const { email, password, name, type = 'user' } = requestData;
 
             // Validation
             if (!email || !password || !name) {
@@ -51,6 +74,15 @@ app.http('register', {
                             name: !name ? 'Name is required' : null
                         }
                     })
+                };
+            }
+
+            // Validate user type
+            if (type && !['user', 'admin'].includes(type)) {
+                return {
+                    status: 400,
+                    headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: 'Invalid user type. Must be either "user" or "admin"' })
                 };
             }
 
@@ -94,20 +126,19 @@ app.http('register', {
                 data: {
                     email: email.toLowerCase(),
                     password: hashedPassword,
-                    name: name.trim()
+                    name: name.trim(),
+                    type: type
                 },
                 select: {
                     id: true,
                     email: true,
                     name: true,
+                    type: true,
                     createdAt: true
                 }
             });
 
-            // Generate token
-            const token = generateToken(user.id, user.email, rememberMe);
-
-            context.log(`User registered successfully: ${user.email}`);
+            context.log(`User registered successfully by admin: ${user.email} (type: ${user.type})`);
 
             return {
                 status: 201,
@@ -115,9 +146,7 @@ app.http('register', {
                 body: JSON.stringify({
                     success: true,
                     message: 'User registered successfully',
-                    token,
-                    user,
-                    expiresIn: rememberMe ? '30 days' : '8 hours'
+                    user
                 })
             };
 

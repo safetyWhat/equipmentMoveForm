@@ -11,33 +11,37 @@ class AuthManager {
         }
     }
     
-    // Register new user
-    async register(email, password, name, rememberMe = false) {
+    // Register new user (Admin only)
+    async registerUser(email, password, name, type = 'user') {
+        if (!this.isAdmin()) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
         try {
             const response = await fetch(`${this.baseUrl}/register`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
                 },
                 body: JSON.stringify({
                     email,
                     password,
                     name,
-                    rememberMe
+                    type
                 })
             });
             
             const data = await response.json();
             
             if (response.ok) {
-                this.setAuthData(data.token, data.user);
                 return { success: true, user: data.user };
             } else {
                 return { success: false, error: data.error };
             }
         } catch (error) {
-            console.error('Registration error:', error);
-            return { success: false, error: 'Network error during registration' };
+            console.error('User registration error:', error);
+            return { success: false, error: 'Network error during user registration' };
         }
     }
     
@@ -165,6 +169,97 @@ class AuthManager {
     // Get current user
     getCurrentUser() {
         return this.user;
+    }
+    
+    // Check if current user is admin
+    isAdmin() {
+        return this.user && this.user.type === 'admin';
+    }
+    
+    // Get all users (Admin only)
+    async getUsers() {
+        if (!this.isAdmin()) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/getUsers`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                return { success: true, users: data.users };
+            } else {
+                return { success: false, error: data.error };
+            }
+        } catch (error) {
+            console.error('Get users error:', error);
+            return { success: false, error: 'Network error while fetching users' };
+        }
+    }
+    
+    // Update user (Admin only)
+    async updateUser(userId, updates) {
+        if (!this.isAdmin()) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/updateUser`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({
+                    userId,
+                    ...updates
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                return { success: true, user: data.user };
+            } else {
+                return { success: false, error: data.error };
+            }
+        } catch (error) {
+            console.error('Update user error:', error);
+            return { success: false, error: 'Network error while updating user' };
+        }
+    }
+    
+    // Delete user (Admin only)
+    async deleteUser(userId) {
+        if (!this.isAdmin()) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/deleteUser?userId=${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                return { success: true, deletedUser: data.deletedUser };
+            } else {
+                return { success: false, error: data.error };
+            }
+        } catch (error) {
+            console.error('Delete user error:', error);
+            return { success: false, error: 'Network error while deleting user' };
+        }
     }
     
     // Get auth headers for manual requests

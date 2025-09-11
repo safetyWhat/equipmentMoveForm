@@ -18,7 +18,10 @@
 		<div class="auth-header">
 			<div class="auth-status" id="authStatus" style="display: none;">
 				<div class="user-info" id="userInfo">Loading...</div>
-				<button class="logout-button" id="logoutButton">Logout</button>
+				<div class="auth-actions">
+					<button class="admin-button" id="adminButton" style="display: none;" onclick="window.location.href='admin.html'">Admin Panel</button>
+					<button class="logout-button" id="logoutButton">Logout</button>
+				</div>
 			</div>
 			<div class="auth-loading" id="authLoading">
 				Checking authentication...

@@ -122,14 +122,52 @@
     border: 1px solid #f5c6cb;
 }
 
+/* Success Messages */
 .success-message {
-    background: #d4edda;
+    background-color: #d4edda;
     color: #155724;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    display: none;
     border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 1rem 0;
+    display: none;
+}
+
+/* Registration Info */
+.registration-info {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.registration-info h3 {
+    color: #495057;
+    margin: 0 0 1rem 0;
+    font-size: 1.2rem;
+}
+
+.registration-info p {
+    color: #6c757d;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.info-box {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.info-box strong {
+    color: #1976d2;
+    display: block;
+    margin-bottom: 0.5rem;
 }
 
 .loading {
@@ -190,6 +228,27 @@
 .user-info {
     font-weight: 600;
     color: #333;
+}
+
+.auth-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.admin-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.admin-button:hover {
+    background: #0056b3;
 }
 
 .logout-button {

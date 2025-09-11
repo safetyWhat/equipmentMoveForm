@@ -14,7 +14,6 @@
             
             <div class="auth-tabs">
                 <button class="auth-tab active" data-tab="login">Login</button>
-                <button class="auth-tab" data-tab="register">Register</button>
             </div>
             
             <div class="error-message" id="errorMessage"></div>
@@ -46,38 +45,15 @@
                 <button type="submit" class="auth-button" id="loginButton">Login</button>
             </form>
             
-            <!-- Register Form -->
-            <form id="registerForm" class="auth-form">
-                <div class="form-group">
-                    <label for="registerName">Full Name</label>
-                    <input type="text" id="registerName" name="name" required>
+            <!-- Registration Info -->
+            <div class="registration-info">
+                <h3>Need an Account?</h3>
+                <p>User registration is handled by system administrators. Please contact your administrator to request an account.</p>
+                <div class="info-box">
+                    <strong>For Administrators:</strong>
+                    <p>If you are an administrator, log in with your admin credentials to access the user management panel where you can create and manage user accounts.</p>
                 </div>
-                
-                <div class="form-group">
-                    <label for="registerEmail">Email Address</label>
-                    <input type="email" id="registerEmail" name="email" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="registerPassword">Password</label>
-                    <input type="password" id="registerPassword" name="password" required minlength="6">
-                    <small>Password must be at least 6 characters long</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required>
-                </div>
-                
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="registerRememberMe" name="rememberMe">
-                        <label for="registerRememberMe">Remember me for 30 days</label>
-                    </div>
-                </div>
-                
-                <button type="submit" class="auth-button" id="registerButton">Register</button>
-            </form>
+            </div>
             
             <div style="text-align: center; margin-top: 2rem;">
                 <button class="link-button" onclick="window.location.href='test-connection.html'">
