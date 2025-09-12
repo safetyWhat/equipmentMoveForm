@@ -31,6 +31,7 @@ async function verifyJWT(request, context) {
                 id: true,
                 email: true,
                 name: true,
+                type: true,
                 createdAt: true,
                 updatedAt: true
             }
@@ -42,7 +43,7 @@ async function verifyJWT(request, context) {
         }
 
         context.log(`User authenticated: ${user.email}`);
-        return { success: true, user };
+        return { success: true, user, userId: user.id }; // Add userId to return
 
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {

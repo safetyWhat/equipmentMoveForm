@@ -63,6 +63,8 @@ class AuthManager {
             const data = await response.json();
             
             if (response.ok) {
+                // Debug log to check user data
+                console.log('User from login:', data.user);
                 this.setAuthData(data.token, data.user);
                 return { success: true, user: data.user };
             } else {
@@ -89,6 +91,8 @@ class AuthManager {
             const data = await response.json();
             
             if (response.ok && data.valid) {
+				// Check if user object has all required fields
+            	console.log('User from validateToken:', data.user); // Debug log
                 this.user = data.user;
                 return true;
             } else {

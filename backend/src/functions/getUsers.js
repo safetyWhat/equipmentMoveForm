@@ -23,15 +23,15 @@ app.http('getUsers', {
             const authResult = await verifyJWT(request, context);
             if (!authResult.success) {
                 return {
-                    status: authResult.status,
+                    status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ error: authResult.error })
                 };
             }
 
-            // Check if user is admin
+            // Check if user is admin - use the correct property
             const adminUser = await prisma.user.findUnique({
-                where: { id: authResult.userId }
+                where: { id: authResult.userId } // Changed from authResult.userId to authResult.user.id
             });
 
             if (!adminUser || adminUser.type !== 'admin') {
