@@ -23,7 +23,7 @@ app.http('deleteUser', {
             const authResult = await verifyJWT(request, context);
             if (!authResult.success) {
                 return {
-                    status: authResult.status,
+                    status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ error: authResult.error })
                 };

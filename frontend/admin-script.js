@@ -172,8 +172,21 @@ function renderUsersTable() {
         return;
     }
     
+    // Get current user ID for comparison
+    const currentUser = auth.getCurrentUser();
+    const currentUserId = currentUser ? currentUser.id : null;
+    
     users.forEach(user => {
         const row = document.createElement('tr');
+        
+        // Check if this is the current user
+        const isCurrentUser = currentUserId && user.id === currentUserId;
+        
+        // Create delete button - disable if current user
+        const deleteButton = isCurrentUser 
+            ? '<button class="btn-small btn-delete" disabled title="Cannot delete your own account">Delete</button>'
+            : `<button class="btn-small btn-delete" onclick="showDeleteModal('${user.id}')">Delete</button>`;
+        
         row.innerHTML = `
             <td>${escapeHtml(user.name)}</td>
             <td>${escapeHtml(user.email)}</td>
@@ -183,7 +196,7 @@ function renderUsersTable() {
             <td>
                 <div class="user-actions">
                     <button class="btn-small btn-edit" onclick="editUser('${user.id}')">Edit</button>
-                    <button class="btn-small btn-delete" onclick="showDeleteModal('${user.id}')">Delete</button>
+                    ${deleteButton}
                 </div>
             </td>
         `;
@@ -266,6 +279,13 @@ function showDeleteModal(userId) {
     const user = users.find(u => u.id === userId);
     if (!user) {
         showError('User not found');
+        return;
+    }
+    
+    // Check if trying to delete current user
+    const currentUser = auth.getCurrentUser();
+    if (currentUser && currentUser.id === userId) {
+        showError('You cannot delete your own account');
         return;
     }
     
@@ -353,6 +373,14 @@ async function handleUserSubmit(event) {
 
 async function confirmDelete() {
     if (!deletingUserId || !auth) return;
+    
+    // Double-check: prevent self-deletion
+    const currentUser = auth.getCurrentUser();
+    if (currentUser && currentUser.id === deletingUserId) {
+        showError('You cannot delete your own account');
+        closeDeleteModal();
+        return;
+    }
     
     showLoading();
     hideMessages();
