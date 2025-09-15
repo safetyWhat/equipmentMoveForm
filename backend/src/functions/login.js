@@ -34,17 +34,17 @@ app.http('login', {
                 };
             }
 
-            const { email, password, rememberMe = false } = requestData;
+            const { username, password, rememberMe = false } = requestData;
 
             // Validation
-            if (!email || !password) {
+            if (!username || !password) {
                 return {
                     status: 400,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        error: 'Email and password are required',
+                        error: 'username and password are required',
                         details: {
-                            email: !email ? 'Email is required' : null,
+                            username: !username ? 'username is required' : null,
                             password: !password ? 'Password is required' : null
                         }
                     })
@@ -53,33 +53,33 @@ app.http('login', {
 
             // Find user
             const user = await prisma.user.findUnique({
-                where: { email: email.toLowerCase() }
+                where: { username: username.toLowerCase() }
             });
 
             if (!user) {
-                context.log.warn(`Login attempt for non-existent user: ${email}`);
+                context.log.warn(`Login attempt for non-existent user: ${username}`);
                 return {
                     status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'Invalid email or password' })
+                    body: JSON.stringify({ error: 'Invalid username or password' })
                 };
             }
 
             // Verify password
             const validPassword = await bcrypt.compare(password, user.password);
             if (!validPassword) {
-                context.log.warn(`Invalid password attempt for user: ${email}`);
+                context.log.warn(`Invalid password attempt for user: ${username}`);
                 return {
                     status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'Invalid email or password' })
+                    body: JSON.stringify({ error: 'Invalid username or password' })
                 };
             }
 
             // Generate token
-            const token = generateToken(user.id, user.email, rememberMe);
+            const token = generateToken(user.id, user.username, rememberMe);
 
-            context.log(`User logged in successfully: ${user.email}`);
+            context.log(`User logged in successfully: ${user.username}`);
 
             return {
                 status: 200,
@@ -90,7 +90,7 @@ app.http('login', {
                     token,
                     user: {
                         id: user.id,
-                        email: user.email,
+                        username: user.username,
                         name: user.name,
                         type: user.type
                     },

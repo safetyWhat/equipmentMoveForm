@@ -12,7 +12,7 @@ class AuthManager {
     }
     
     // Register new user (Admin only)
-    async registerUser(email, password, name, type = 'user') {
+    async registerUser(username, password, name, type = 'user') {
         if (!this.isAdmin()) {
             throw new Error('Access denied. Admin privileges required.');
         }
@@ -25,7 +25,7 @@ class AuthManager {
                     'Authorization': `Bearer ${this.token}`
                 },
                 body: JSON.stringify({
-                    email,
+                    username,
                     password,
                     name,
                     type
@@ -46,7 +46,7 @@ class AuthManager {
     }
     
     // Login user
-    async login(email, password, rememberMe = false) {
+    async login(username, password, rememberMe = false) {
         try {
             const response = await fetch(`${this.baseUrl}/login`, {
                 method: 'POST',
@@ -54,7 +54,7 @@ class AuthManager {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    email,
+                    username,
                     password,
                     rememberMe
                 })

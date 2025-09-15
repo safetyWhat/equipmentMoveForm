@@ -46,7 +46,7 @@ app.http('getUsers', {
             const users = await prisma.user.findMany({
                 select: {
                     id: true,
-                    email: true,
+                    username: true,
                     name: true,
                     type: true,
                     createdAt: true,
@@ -58,7 +58,7 @@ app.http('getUsers', {
                 orderBy: { createdAt: 'desc' }
             });
 
-            context.log(`Retrieved ${users.length} users for admin: ${adminUser.email}`);
+            context.log(`Retrieved ${users.length} users for admin: ${adminUser.username}`);
 
             return {
                 status: 200,

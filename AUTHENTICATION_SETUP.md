@@ -19,7 +19,7 @@ The application uses PostgreSQL with the following user schema:
 ```prisma
 model User {
   id            String          @id @default(cuid())
-  email         String          @unique
+  username         String          @unique
   password      String
   name          String
   type          UserType        @default(user)
@@ -91,7 +91,7 @@ node create-admin.js
 
 This will prompt you for:
 
-- Admin email
+- Admin username
 - Admin password
 - Admin name
 
@@ -99,14 +99,14 @@ This will prompt you for:
 
 ### User Registration
 
-1. User submits registration form with email, password, and name
+1. User submits registration form with username, password, and name
 2. Password is hashed using bcrypt
 3. User record is created in database with default 'user' type
 4. JWT token is generated and returned
 
 ### User Login
 
-1. User submits email and password
+1. User submits username and password
 2. System verifies credentials against database
 3. If valid, JWT token is generated and returned
 4. Token includes user ID and expiration time
@@ -138,11 +138,11 @@ This will prompt you for:
 
 ```javascript
 // Example login function
-async function login(email, password) {
+async function login(username, password) {
   const response = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
 
   const data = await response.json();

@@ -76,7 +76,7 @@ function formatDataForPowerAutomate(data, user) {
         userDetails: {
             id: user.id,
             name: user.name,
-            email: user.email,
+            username: user.username,
             submittedBy: data.userName?.trim() || user.name
         },
         equipmentDetails: {
@@ -195,7 +195,7 @@ app.http('submitEquipmentMove', {
         }
 
         const user = authResult.user;
-        context.log(`Authenticated user: ${user.email} submitting equipment move form`);
+        context.log(`Authenticated user: ${user.username} submitting equipment move form`);
         
         try {
             // Parse request body
@@ -299,7 +299,7 @@ app.http('submitEquipmentMove', {
                 user: {
                     id: user.id,
                     name: user.name,
-                    email: user.email
+                    username: user.username
                 }
             };
             

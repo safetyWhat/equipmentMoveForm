@@ -86,7 +86,7 @@ app.http('deleteUser', {
                 where: { id: userId }
             });
 
-            context.log(`User deleted successfully by admin: ${userToDelete.email} (admin: ${adminUser.email})`);
+            context.log(`User deleted successfully by admin: ${userToDelete.username} (admin: ${adminUser.username})`);
 
             return {
                 status: 200,
@@ -96,7 +96,7 @@ app.http('deleteUser', {
                     message: 'User deleted successfully',
                     deletedUser: {
                         id: userToDelete.id,
-                        email: userToDelete.email,
+                        username: userToDelete.username,
                         name: userToDelete.name,
                         type: userToDelete.type,
                         equipmentMoveCount: userToDelete._count.equipmentMoves

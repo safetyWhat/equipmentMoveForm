@@ -59,17 +59,17 @@ app.http('register', {
                 };
             }
 
-            const { email, password, name, type = 'user' } = requestData;
+            const { username, password, name, type = 'user' } = requestData;
 
             // Validation
-            if (!email || !password || !name) {
+            if (!username || !password || !name) {
                 return {
                     status: 400,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        error: 'Email, password, and name are required',
+                        error: 'username, password, and name are required',
                         details: {
-                            email: !email ? 'Email is required' : null,
+                            username: !username ? 'username is required' : null,
                             password: !password ? 'Password is required' : null,
                             name: !name ? 'Name is required' : null
                         }
@@ -86,13 +86,13 @@ app.http('register', {
                 };
             }
 
-            // Email format validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
+            // username format validation
+            const usernameRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!usernameRegex.test(username)) {
                 return {
                     status: 400,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'Invalid email format' })
+                    body: JSON.stringify({ error: 'Invalid username format' })
                 };
             }
 
@@ -107,14 +107,14 @@ app.http('register', {
 
             // Check if user already exists
             const existingUser = await prisma.user.findUnique({
-                where: { email: email.toLowerCase() }
+                where: { username: username.toLowerCase() }
             });
 
             if (existingUser) {
                 return {
                     status: 409,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'User with this email already exists' })
+                    body: JSON.stringify({ error: 'User with this username already exists' })
                 };
             }
 
@@ -124,21 +124,21 @@ app.http('register', {
             // Create user
             const user = await prisma.user.create({
                 data: {
-                    email: email.toLowerCase(),
+                    username: username.toLowerCase(),
                     password: hashedPassword,
                     name: name.trim(),
                     type: type
                 },
                 select: {
                     id: true,
-                    email: true,
+                    username: true,
                     name: true,
                     type: true,
                     createdAt: true
                 }
             });
 
-            context.log(`User registered successfully by admin: ${user.email} (type: ${user.type})`);
+            context.log(`User registered successfully by admin: ${user.username} (type: ${user.type})`);
 
             return {
                 status: 201,
@@ -158,7 +158,7 @@ app.http('register', {
                 return {
                     status: 409,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'User with this email already exists' })
+                    body: JSON.stringify({ error: 'User with this username already exists' })
                 };
             }
             

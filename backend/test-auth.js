@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 // Test user registration data
 const testUser = {
-    email: "test@example.com",
+    username: "test@example.com",
     password: "testpassword123",
     name: "Test User",
     rememberMe: false
@@ -43,7 +43,7 @@ console.log('Equipment Move:', JSON.stringify(testEquipmentMove, null, 2));
 console.log('');
 console.log('📋 Usage Flow:');
 console.log('1. Register: POST /api/register with user data');
-console.log('2. Login: POST /api/login with email/password');
+console.log('2. Login: POST /api/login with username/password');
 console.log('3. Store token from login response');
 console.log('4. Submit forms: Include "Authorization: Bearer <token>" header');
 console.log('');

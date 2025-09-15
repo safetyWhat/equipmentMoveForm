@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (user) {
             const adminInfoElement = document.getElementById('adminInfo');
             if (adminInfoElement) {
-                adminInfoElement.textContent = `Welcome, ${user.name} (${user.email})`;
+                adminInfoElement.textContent = `Welcome, ${user.name} (${user.username})`;
             }
         }
         
@@ -189,7 +189,7 @@ function renderUsersTable() {
         
         row.innerHTML = `
             <td>${escapeHtml(user.name)}</td>
-            <td>${escapeHtml(user.email)}</td>
+            <td>${escapeHtml(user.username)}</td>
             <td><span class="user-type-badge badge-${user.type}">${user.type.toUpperCase()}</span></td>
             <td>${user.equipmentMoveCount || 0}</td>
             <td>${new Date(user.createdAt).toLocaleDateString()}</td>
@@ -253,12 +253,12 @@ function editUser(userId) {
     // Populate form
     const userIdField = document.getElementById('userId');
     const userNameField = document.getElementById('userName');
-    const userEmailField = document.getElementById('userEmail');
+    const userUsernameField = document.getElementById('userUsername');
     const userTypeField = document.getElementById('userType');
     
     if (userIdField) userIdField.value = user.id;
     if (userNameField) userNameField.value = user.name;
-    if (userEmailField) userEmailField.value = user.email;
+    if (userUsernameField) userUsernameField.value = user.username;
     if (userTypeField) userTypeField.value = user.type;
     if (passwordField) passwordField.value = '';
     
@@ -294,7 +294,7 @@ function showDeleteModal(userId) {
     const deleteUserSubmissions = document.getElementById('deleteUserSubmissions');
     const deleteModal = document.getElementById('deleteModal');
     
-    if (deleteUserInfo) deleteUserInfo.textContent = `${user.name} (${user.email})`;
+    if (deleteUserInfo) deleteUserInfo.textContent = `${user.name} (${user.username})`;
     if (deleteUserSubmissions) deleteUserSubmissions.textContent = user.equipmentMoveCount || 0;
     if (deleteModal) deleteModal.style.display = 'block';
     
@@ -321,14 +321,14 @@ async function handleUserSubmit(event) {
     const formData = new FormData(event.target);
     const userData = {
         name: formData.get('name'),
-        email: formData.get('email'),
+        username: formData.get('username'),
         type: formData.get('type'),
         password: formData.get('password')
     };
     
     // Validate required fields
-    if (!userData.name || !userData.email || !userData.type) {
-        showError('Name, email, and type are required');
+    if (!userData.name || !userData.username || !userData.type) {
+        showError('Name, username, and type are required');
         return;
     }
     
@@ -352,7 +352,7 @@ async function handleUserSubmit(event) {
             result = await auth.updateUser(editingUserId, userData);
         } else {
             // For new users, use the registerUser method from AuthManager
-            result = await auth.registerUser(userData.email, userData.password, userData.name, userData.type);
+            result = await auth.registerUser(userData.username, userData.password, userData.name, userData.type);
         }
         
         hideLoading();

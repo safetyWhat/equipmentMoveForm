@@ -29,7 +29,7 @@ app.http('validateToken', {
                 };
             }
             
-            context.log(`Token validated for user: ${authResult.user.email}`);
+            context.log(`Token validated for user: ${authResult.user.username}`);
             
             return {
                 status: 200,

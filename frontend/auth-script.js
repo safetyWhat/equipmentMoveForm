@@ -71,13 +71,13 @@ async function handleLogin(event) {
     event.preventDefault();
     
     const formData = new FormData(loginForm);
-    const email = formData.get('email');
+    const username = formData.get('username');
     const password = formData.get('password');
     const rememberMe = formData.get('rememberMe') === 'on';
     
     // Basic validation
-    if (!email || !password) {
-        showError('Email and password are required');
+    if (!username || !password) {
+        showError('Username and password are required');
         return;
     }
     
@@ -85,7 +85,7 @@ async function handleLogin(event) {
     hideMessages();
     
     try {
-        const result = await auth.login(email, password, rememberMe);
+        const result = await auth.login(username, password, rememberMe);
         
         hideLoading();
         

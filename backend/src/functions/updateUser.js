@@ -58,7 +58,7 @@ app.http('updateUser', {
                 };
             }
 
-            const { userId, email, name, type, password } = requestData;
+            const { userId, username, name, type, password } = requestData;
 
             // Validation
             if (!userId) {
@@ -85,31 +85,31 @@ app.http('updateUser', {
             // Prepare update data
             const updateData = {};
 
-            if (email && email !== existingUser.email) {
-                // Email format validation
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
+            if (username && username !== existingUser.username) {
+                // username format validation
+                const usernameRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!usernameRegex.test(username)) {
                     return {
                         status: 400,
                         headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ error: 'Invalid email format' })
+                        body: JSON.stringify({ error: 'Invalid username format' })
                     };
                 }
 
-                // Check if email is already taken
-                const emailExists = await prisma.user.findUnique({
-                    where: { email: email.toLowerCase() }
+                // Check if username is already taken
+                const usernameExists = await prisma.user.findUnique({
+                    where: { username: username.toLowerCase() }
                 });
 
-                if (emailExists && emailExists.id !== userId) {
+                if (usernameExists && usernameExists.id !== userId) {
                     return {
                         status: 409,
                         headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ error: 'Email is already taken by another user' })
+                        body: JSON.stringify({ error: 'username is already taken by another user' })
                     };
                 }
 
-                updateData.email = email.toLowerCase();
+                updateData.username = username.toLowerCase();
             }
 
             if (name && name.trim() !== existingUser.name) {
@@ -142,7 +142,7 @@ app.http('updateUser', {
                         message: 'No changes detected',
                         user: {
                             id: existingUser.id,
-                            email: existingUser.email,
+                            username: existingUser.username,
                             name: existingUser.name,
                             type: existingUser.type,
                             createdAt: existingUser.createdAt,
@@ -158,7 +158,7 @@ app.http('updateUser', {
                 data: updateData,
                 select: {
                     id: true,
-                    email: true,
+                    username: true,
                     name: true,
                     type: true,
                     createdAt: true,
@@ -166,7 +166,7 @@ app.http('updateUser', {
                 }
             });
 
-            context.log(`User updated successfully by admin: ${updatedUser.email} (admin: ${adminUser.email})`);
+            context.log(`User updated successfully by admin: ${updatedUser.username} (admin: ${adminUser.username})`);
 
             return {
                 status: 200,
@@ -186,7 +186,7 @@ app.http('updateUser', {
                 return {
                     status: 409,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'Email is already taken by another user' })
+                    body: JSON.stringify({ error: 'username is already taken by another user' })
                 };
             }
             
