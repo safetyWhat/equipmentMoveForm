@@ -26,7 +26,7 @@ app.http('login', {
                 const rawBody = await request.text();
                 requestData = JSON.parse(rawBody);
             } catch (parseError) {
-                context.log.error('Failed to parse request body:', parseError);
+                context.error('Failed to parse request body:', parseError);
                 return {
                     status: 400,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
@@ -57,7 +57,7 @@ app.http('login', {
             });
 
             if (!user) {
-                context.log.warn(`Login attempt for non-existent user: ${username}`);
+                context.warn(`Login attempt for non-existent user: ${username}`);
                 return {
                     status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ app.http('login', {
             // Verify password
             const validPassword = await bcrypt.compare(password, user.password);
             if (!validPassword) {
-                context.log.warn(`Invalid password attempt for user: ${username}`);
+                context.warn(`Invalid password attempt for user: ${username}`);
                 return {
                     status: 401,
                     headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ app.http('login', {
             };
 
         } catch (error) {
-            context.log.error('Login error:', error);
+            context.error('Login error:', error);
             return {
                 status: 500,
                 headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
