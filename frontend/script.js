@@ -139,14 +139,58 @@ function handleLogout() {
     // Auth state change event will handle redirect
 }
 
-// Form validation
+// Submit form data using AuthManager
+async function submitFormWithAuth(formData) {
+    try {
+        // Convert FormData to plain object
+        const dataObject = {};
+        
+        // Extract form fields
+        for (const [key, value] of formData.entries()) {
+            if (key !== 'photos') {
+                dataObject[key] = value.trim ? value.trim() : value;
+            }
+        }
+        
+        // Inject authenticated user's name
+        const currentUser = authManager.getCurrentUser();
+        if (currentUser && currentUser.name) {
+            dataObject.userName = currentUser.name;
+        } else {
+            throw new Error('User authentication required - no user name available');
+        }
+        
+        // Convert files to base64
+        const files = formData.getAll('photos');
+        if (files && files.length > 0) {
+            dataObject.photos = await convertFilesToBase64(files);
+        }
+        
+        // Parse numeric fields
+        if (dataObject.equipmentHours) {
+            dataObject.equipmentHours = parseFloat(dataObject.equipmentHours);
+        }
+        
+        // Submit using auth manager
+        const result = await authManager.submitEquipmentMove(dataObject);
+        
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || 'Form submission failed');
+        }
+        
+    } catch (error) {
+        console.error('Form submission error:', error);
+        throw error;
+    }
+}
+
+// Form validation (updated to not check for userName since it's injected)
 function validateForm(formData) {
     const errors = [];
     
-    // Check required fields
-    if (!formData.get('userName').trim()) {
-        errors.push('Name is required');
-    }
+    // userName is no longer required from form since it's injected from auth
     
     if (!formData.get('unitNumber').trim()) {
         errors.push('Unit number is required');
@@ -230,45 +274,6 @@ function hideAllMessages() {
     hideElement(loadingSpinner);
     hideElement(successMessage);
     hideElement(errorMessage);
-}
-
-// Submit form data using AuthManager
-async function submitFormWithAuth(formData) {
-    try {
-        // Convert FormData to plain object
-        const dataObject = {};
-        
-        // Extract form fields
-        for (const [key, value] of formData.entries()) {
-            if (key !== 'photos') {
-                dataObject[key] = value.trim ? value.trim() : value;
-            }
-        }
-        
-        // Convert files to base64
-        const files = formData.getAll('photos');
-        if (files && files.length > 0) {
-            dataObject.photos = await convertFilesToBase64(files);
-        }
-        
-        // Parse numeric fields
-        if (dataObject.equipmentHours) {
-            dataObject.equipmentHours = parseFloat(dataObject.equipmentHours);
-        }
-        
-        // Submit using auth manager
-        const result = await authManager.submitEquipmentMove(dataObject);
-        
-        if (result.success) {
-            return result.data;
-        } else {
-            throw new Error(result.error || 'Form submission failed');
-        }
-        
-    } catch (error) {
-        console.error('Form submission error:', error);
-        throw error;
-    }
 }
 
 // Handle form submission (updated to use authentication)

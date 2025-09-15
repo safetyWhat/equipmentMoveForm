@@ -57,8 +57,10 @@ label {
 input[type="text"],
 input[type="date"],
 input[type="number"],
+input[type="password"],
 textarea,
-input[type="file"] {
+input[type="file"],
+select {
     width: 100%;
     padding: 15px;
     border: 2px solid #e1e5e9;
@@ -71,8 +73,10 @@ input[type="file"] {
 input[type="text"]:focus,
 input[type="date"]:focus,
 input[type="number"]:focus,
+input[type="password"]:focus,
 textarea:focus,
-input[type="file"]:focus {
+input[type="file"]:focus,
+select:focus {
     outline: none;
     border-color: #4facfe;
     box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
@@ -195,8 +199,10 @@ small {
     input[type="text"],
     input[type="date"],
     input[type="number"],
+	input[type="password"],
     textarea,
-    input[type="file"] {
+    input[type="file"],
+	select {
         padding: 12px;
         font-size: 16px;
     }

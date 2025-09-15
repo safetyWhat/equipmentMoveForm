@@ -386,6 +386,7 @@ async function confirmDelete() {
     hideMessages();
     
     try {
+		console.log('Deleting user with ID:', deletingUserId);
         const result = await auth.deleteUser(deletingUserId);
         hideLoading();
         

@@ -90,7 +90,7 @@ function createUnauthorizedResponse(error = 'Unauthorized') {
 function getCorsHeaders() {
     return {
         'Access-Control-Allow-Origin': 'http://localhost:3000', // Adjust as needed for production
-        'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400'
     };
