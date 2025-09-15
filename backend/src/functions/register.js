@@ -87,7 +87,7 @@ app.http('register', {
             }
 
             // username format validation
-            const usernameRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const usernameRegex = /^[a-zA-Z0-9]{4,12}$/;
             if (!usernameRegex.test(username)) {
                 return {
                     status: 400,
