@@ -5,39 +5,44 @@ const prisma = new PrismaClient();
 
 async function createAdmin() {
     try {
-        // Check if admin already exists
-        const existingAdmin = await prisma.user.findUnique({
-            where: { email: 'admin@company.com' }
+        const username = process.argv[2];
+        const password = process.argv[3];
+        const name = process.argv[4];
+
+        if (!username || !password || !name) {
+            console.log('Usage: node create-admin.js <username> <password> <name>');
+            console.log('Example: node create-admin.js admin mypassword "Admin User"');
+            return;
+        }
+
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { username }
         });
 
-        if (existingAdmin) {
-            console.log('Admin user already exists, updating type...');
-            // Update existing user to be admin
-            const updatedAdmin = await prisma.user.update({
-                where: { email: 'admin@company.com' },
-                data: { type: 'admin' }
-            });
-            console.log('Admin user updated:', updatedAdmin);
-        } else {
-            // Create new admin user
-            const hashedPassword = await bcrypt.hash('admin123', 12);
-            
-            const admin = await prisma.user.create({
-                data: {
-                    email: 'admin@company.com',
-                    password: hashedPassword,
-                    name: 'System Administrator',
-                    type: 'admin'
-                }
-            });
-            
-            console.log('Admin user created successfully:', {
-                id: admin.id,
-                email: admin.email,
-                name: admin.name,
-                type: admin.type
-            });
+        if (existingUser) {
+            console.log(`User with username ${username} already exists`);
+            return;
         }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create admin user
+        const user = await prisma.user.create({
+            data: {
+                username,
+                password: hashedPassword,
+                name,
+                type: 'admin'
+            }
+        });
+
+        console.log('Admin user created successfully:');
+        console.log(`ID: ${user.id}`);
+        console.log(`Username: ${user.username}`);
+        console.log(`Name: ${user.name}`);
+        console.log(`Type: ${user.type}`);
         
     } catch (error) {
         console.error('Error creating admin user:', error);

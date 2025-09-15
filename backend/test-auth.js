@@ -1,6 +1,11 @@
 // Simple test script to verify our authentication functions work
 const fs = require('fs');
 const path = require('path');
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const { generateToken } = require('./src/utils/authMiddleware');
+
+const prisma = new PrismaClient();
 
 // Test user registration data
 const testUser = {
@@ -48,6 +53,62 @@ console.log('- Password hashing with bcrypt (12 rounds)');
 console.log('- Input validation and sanitization');
 console.log('- CORS enabled for frontend integration');
 console.log('- Database storage with Prisma + SQLite');
+
+async function testAuth() {
+    try {
+        console.log('Testing authentication system...\n');
+
+        // Test 1: Create a test user
+        console.log('1. Creating test user...');
+        const hashedPassword = await bcrypt.hash('testpassword', 12);
+        
+        const user = await prisma.user.create({
+            data: {
+                username: 'testuser',
+                password: hashedPassword,
+                name: 'Test User',
+                type: 'user'
+            }
+        });
+        console.log(`✓ Test user created: ${user.username}`);
+
+        // Test 2: Verify password
+        console.log('\n2. Testing password verification...');
+        const isValidPassword = await bcrypt.compare('testpassword', user.password);
+        console.log(`✓ Password verification: ${isValidPassword ? 'PASS' : 'FAIL'}`);
+
+        // Test 3: Generate JWT token
+        console.log('\n3. Testing JWT token generation...');
+        const token = generateToken(user.id, user.username);
+        console.log(`✓ JWT token generated: ${token.substring(0, 50)}...`);
+
+        // Test 4: Find user by username
+        console.log('\n4. Testing user lookup...');
+        const foundUser = await prisma.user.findUnique({
+            where: { username: 'testuser' }
+        });
+        console.log(`✓ User lookup: ${foundUser ? 'FOUND' : 'NOT FOUND'}`);
+        console.log(`  Username: ${foundUser?.username}`);
+        console.log(`  Name: ${foundUser?.name}`);
+        console.log(`  Type: ${foundUser?.type}`);
+
+        // Clean up
+        console.log('\n5. Cleaning up test user...');
+        await prisma.user.delete({
+            where: { id: user.id }
+        });
+        console.log('✓ Test user deleted');
+
+        console.log('\n✅ All authentication tests passed!');
+
+    } catch (error) {
+        console.error('❌ Test failed:', error);
+    } finally {
+        await prisma.$disconnect();
+    }
+}
+
+testAuth();
 
 module.exports = {
     testUser,

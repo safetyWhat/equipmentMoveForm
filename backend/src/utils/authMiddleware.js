@@ -29,7 +29,7 @@ async function verifyJWT(request, context) {
             where: { id: decoded.userId },
             select: {
                 id: true,
-                email: true,
+                username: true,
                 name: true,
                 type: true,
                 createdAt: true,
@@ -42,7 +42,7 @@ async function verifyJWT(request, context) {
             return { success: false, error: 'User not found' };
         }
 
-        context.log(`User authenticated: ${user.email}`);
+        context.log(`User authenticated: ${user.username}`);
         return { success: true, user, userId: user.id }; // Add userId to return
 
     } catch (error) {
@@ -62,11 +62,11 @@ async function verifyJWT(request, context) {
 }
 
 // Generate JWT token
-function generateToken(userId, email, rememberMe = false) {
+function generateToken(userId, username, rememberMe = false) {
     const expiresIn = rememberMe ? AUTH_CONFIG.REMEMBER_ME_EXPIRES_IN : AUTH_CONFIG.JWT_EXPIRES_IN;
     
     return jwt.sign(
-        { userId, email },
+        { userId, username },
         AUTH_CONFIG.JWT_SECRET,
         { expiresIn }
     );
