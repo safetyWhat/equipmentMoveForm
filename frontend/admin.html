@@ -10,12 +10,14 @@
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header">
-            <h1>Admin Dashboard</h1>
+        <div class="admin-header admin-controls">
             <div>
-                <span id="adminInfo"></span>
-                <button onclick="goToMainApp()" class="auth-button" style="margin-left: 1rem;">Equipment Form</button>
-                <button onclick="logout()" class="auth-button" style="margin-left: 0.5rem; background: #dc3545;">Logout</button>
+				<h1>Admin Dashboard</h1>
+				<p id="adminInfo"></p>
+			</div>
+            <div class="admin-actions">
+                <button onclick="goToMainApp()" class="auth-button">Equipment Form</button>
+                <button onclick="logout()" class="auth-button" style="background: #dc3545;">Logout</button>
             </div>
         </div>
         
@@ -33,9 +35,13 @@
         
         <!-- Users Section -->
         <div id="usersSection" class="admin-section active">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>User Management</h2>
-                <button onclick="showAddUserModal()" class="auth-button">Add New User</button>
+            <div class="admin-controls">
+                <div>
+					<h2>User Management</h2>
+				</div>
+                <div>
+					<button onclick="showAddUserModal()" class="auth-button">Add New User</button>
+				</div>
             </div>
             
             <div class="table-container">

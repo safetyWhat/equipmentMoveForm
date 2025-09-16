@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (user) {
             const adminInfoElement = document.getElementById('adminInfo');
             if (adminInfoElement) {
-                adminInfoElement.textContent = `Welcome, ${user.name} (${user.username})`;
+                adminInfoElement.textContent = `Welcome, ${user.name}`;
             }
         }
         
