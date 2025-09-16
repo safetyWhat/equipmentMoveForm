@@ -105,7 +105,7 @@ app.http('deleteUser', {
             };
 
         } catch (error) {
-            context.log.error('Delete user error:', error);
+            context.error('Delete user error:', error);
             
             return {
                 status: 500,

@@ -43,8 +43,8 @@ model EquipmentMove {
     photos       String? // JSON string of photo data
     createdAt    DateTime @default(now())
 
-    // Relationship
-    user User @relation(fields: [userId], references: [id])
+    // Relationship with cascade delete
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@map("equipment_moves")
 }
