@@ -180,7 +180,6 @@ small {
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
-        margin: 10px;
         border-radius: 8px;
     }
     
