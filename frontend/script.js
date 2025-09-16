@@ -77,7 +77,7 @@ function updateAuthUI(user) {
 	console.log('Authenticated user:', user);
     if (user && userInfo && authStatus && authLoading) {
         userInfo.textContent = `Welcome, ${user.name}`;
-        authStatus.style.display = 'block';
+        authStatus.style.display = 'flex';
         authLoading.style.display = 'none';
         
         // Show admin button for admin users
