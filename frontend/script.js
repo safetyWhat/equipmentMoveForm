@@ -2,7 +2,7 @@
 // Configuration
 const CONFIG = {
     // Azure Function URLs will be set based on authentication
-    AZURE_FUNCTION_URL: 'http://localhost:7071/api/submitEquipmentMove',
+    AZURE_FUNCTION_URL: window.APP_CONFIG.API_URL,
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
