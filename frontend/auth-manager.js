@@ -1,6 +1,6 @@
 // Frontend Authentication Manager for Equipment Move Form
 class AuthManager {
-    constructor(baseUrl = 'http://localhost:7071/api') {
+    constructor(baseUrl = window.APP_CONFIG.API_URL) {
         this.baseUrl = baseUrl;
         this.token = localStorage.getItem('authToken');
         this.user = null;
