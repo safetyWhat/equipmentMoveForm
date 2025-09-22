@@ -20,14 +20,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = 'auth.html';
             return;
         }
-        
+        console.log('Token is valid');
         // Check if user is admin after validation
         if (!auth.isAdmin()) {
             alert('Access denied. Admin privileges required.');
             window.location.href = 'index.html';
             return;
         }
-        
+        console.log('User is admin');
         // Display admin info
         const user = auth.getCurrentUser();
         if (user) {
@@ -39,12 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Load users
         await loadUsers();
-        
+        console.log('Users loaded:', users);
         // Set up form handler
         const userForm = document.getElementById('userForm');
         if (userForm) {
             userForm.addEventListener('submit', handleUserSubmit);
         }
+		console.log('User form event listener set up');
         
     } catch (error) {
         console.error('Admin dashboard initialization error:', error);
