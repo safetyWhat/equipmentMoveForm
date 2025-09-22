@@ -15,12 +15,24 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     steps:
-      # Deploy raw static files from /frontend (no build step)
+      - uses: actions/checkout@v3
+
+      - name: Get Id Token
+        uses: actions/github-script@v6
+        id: idtoken
+        with:
+          script: |
+            const core = require('@actions/core')
+            return await core.getIDToken()
+          result-encoding: string
+
       - name: Deploy Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
-          action: upload
-          app_location: ./frontend # where index.html lives
-          output_location: "./frontend" # publish directly from /frontend
-          api_location: "" # backend is separate
+          action: "upload"
+          app_location: "./frontend"
+          output_location: "./frontend"
+          api_location: ""
+          github_id_token: ${{ steps.idtoken.outputs.result }}
