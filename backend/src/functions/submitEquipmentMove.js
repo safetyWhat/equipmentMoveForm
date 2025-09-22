@@ -202,6 +202,23 @@ app.http('submitEquipmentMove', {
             let requestData;
             try {
                 const rawBody = await request.text();
+                context.log('Raw request body length:', rawBody.length);
+                
+                if (!rawBody || rawBody.trim() === '') {
+                    context.log.error('Empty request body received');
+                    return {
+                        status: 400,
+                        headers: {
+                            ...getCorsHeaders(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            error: 'Empty request body',
+                            details: 'No data received in request'
+                        })
+                    };
+                }
+                
                 requestData = JSON.parse(rawBody);
             } catch (parseError) {
                 context.log.error('Failed to parse request body:', parseError);
@@ -218,13 +235,14 @@ app.http('submitEquipmentMove', {
                 };
             }
             
+            // Add more detailed logging
             context.log('Parsed request data:', {
                 userName: requestData.userName,
                 unitNumber: requestData.unitNumber,
                 moveDate: requestData.moveDate,
                 equipmentHours: requestData.equipmentHours,
-				locationFrom: requestData.locationFrom,
-				locationTo: requestData.locationTo,
+                locationFrom: requestData.locationFrom,
+                locationTo: requestData.locationTo,
                 photosCount: requestData.photos?.length || 0
             });
             
@@ -315,8 +333,9 @@ app.http('submitEquipmentMove', {
             };
             
         } catch (error) {
-            context.log.error('Unexpected error:', error);
+            context.log.error('Unexpected error in submitEquipmentMove:', error);
             
+            // Ensure we always return valid JSON
             return {
                 status: 500,
                 headers: {
@@ -326,7 +345,7 @@ app.http('submitEquipmentMove', {
                 body: JSON.stringify({
                     error: 'Internal server error',
                     message: 'An unexpected error occurred while processing your request',
-                    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+                    details: process.env.NODE_ENV === 'development' ? error.message : 'Contact support if this persists'
                 })
             };
         }

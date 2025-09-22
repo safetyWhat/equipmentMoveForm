@@ -171,6 +171,12 @@ async function submitFormWithAuth(formData) {
             dataObject.equipmentHours = parseFloat(dataObject.equipmentHours);
         }
         
+        // Add debug logging
+        console.log('Submitting data:', {
+            ...dataObject,
+            photos: dataObject.photos ? `${dataObject.photos.length} photos` : 'no photos'
+        });
+        
         // Submit using auth manager
         const result = await authManager.submitEquipmentMove(dataObject);
         
@@ -190,7 +196,7 @@ async function submitFormWithAuth(formData) {
 function validateForm(formData) {
     const errors = [];
     
-    // userName is no longer required from form since it's injected from auth
+    // userName is no longer required from form since it's injected
     
     if (!formData.get('unitNumber').trim()) {
         errors.push('Unit number is required');

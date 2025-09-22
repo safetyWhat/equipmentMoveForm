@@ -122,7 +122,16 @@ class AuthManager {
                 body: JSON.stringify(formData)
             });
             
-            const data = await response.json();
+            // Check if response has content before parsing
+            const responseText = await response.text();
+            let data;
+            
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', responseText);
+                throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
+            }
             
             if (response.status === 401) {
                 // Token expired or invalid
@@ -133,7 +142,7 @@ class AuthManager {
             if (response.ok) {
                 return { success: true, data };
             } else {
-                return { success: false, error: data.error, details: data.details };
+                return { success: false, error: data.error || `Server error: ${response.status}`, details: data.details };
             }
         } catch (error) {
             console.error('Form submission error:', error);
