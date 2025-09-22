@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: "." # path to your Function App project ('.' = repo root)
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "backend" # path to your Function App project ('.' = repo root)
   NODE_VERSION: "20.x" # runtime Node version
 
 jobs:
