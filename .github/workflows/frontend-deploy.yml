@@ -34,4 +34,5 @@ jobs:
           app_location: "./frontend"
           output_location: "./frontend"
           api_location: ""
+          enable_oidc: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
