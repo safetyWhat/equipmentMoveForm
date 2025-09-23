@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		console.log('User form event listener set up');
         
     } catch (error) {
-        console.error('Admin dashboard initialization error:', error);
+        console.error('Admin dashboard initialization error:', error.message, error.stack);
         alert('Error initializing admin dashboard. Please try again.');
         window.location.href = 'auth.html';
     }
