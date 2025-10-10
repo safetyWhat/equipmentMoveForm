@@ -145,7 +145,7 @@ async function saveToDatabase(formattedData, user, context) {
                 locationFrom: formattedData.equipmentDetails.locationFrom,
                 locationTo: formattedData.equipmentDetails.locationTo,
                 notes: formattedData.equipmentDetails.notes || null,
-                photos: formattedData.photos.length > 0 ? JSON.stringify(formattedData.photos) : null
+                //photos: formattedData.photos.length > 0 ? JSON.stringify(formattedData.photos) : null
             }
         });
         
