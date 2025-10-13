@@ -9,6 +9,19 @@ const AUTH_CONFIG = {
     REMEMBER_ME_EXPIRES_IN: '30d'
 };
 
+// CORS headers helper - Updated for better development support
+function getCorsHeaders() {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    return {
+        'Access-Control-Allow-Origin': isDevelopment ? 'http://localhost:3000' : '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '86400'
+    };
+}
+
 // JWT verification utility for Azure Functions
 async function verifyJWT(request, context) {
     try {
@@ -43,7 +56,7 @@ async function verifyJWT(request, context) {
         }
 
         context.log(`User authenticated: ${user.username}`);
-        return { success: true, user, userId: user.id }; // Add userId to return
+        return { success: true, user, userId: user.id };
 
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -72,27 +85,18 @@ function generateToken(userId, username, rememberMe = false) {
     );
 }
 
-// Helper function to create unauthorized response
+// Updated helper function to create unauthorized response with proper CORS
 function createUnauthorizedResponse(error = 'Unauthorized') {
     return {
         status: 401,
         headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...getCorsHeaders(),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ error })
-    };
-}
-
-// CORS headers helper
-function getCorsHeaders() {
-    return {
-        'Access-Control-Allow-Origin': 'http://localhost:3000', // Adjust as needed for production
-        'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400'
+        body: JSON.stringify({
+            error: error,
+            authenticated: false
+        })
     };
 }
 

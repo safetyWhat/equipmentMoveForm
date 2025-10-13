@@ -11,6 +11,18 @@ const CONFIG = {
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
 
+// Helper function to create response with CORS headers
+function createResponse(status, data, isError = false) {
+    return {
+        status: status,
+        headers: {
+            ...getCorsHeaders(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    };
+}
+
 // Validation functions
 function validateRequestData(data) {
     const errors = [];
@@ -83,8 +95,8 @@ function formatDataForPowerAutomate(data, user) {
             unitNumber: data.unitNumber.trim(),
             moveDate: data.moveDate,
             hours: data.equipmentHours,
-			locationFrom: data.locationFrom.trim(),
-			locationTo: data.locationTo.trim(),
+            locationFrom: data.locationFrom.trim(),
+            locationTo: data.locationTo.trim(),
             notes: data.notes?.trim() || ''
         },
         photos: data.photos || [],
@@ -165,39 +177,38 @@ app.http('submitEquipmentMove', {
     authLevel: 'anonymous',
     handler: async (request, context) => {
         context.log('Equipment Move Form submission received');
+        context.log('Request origin:', request.headers.get('origin'));
+        context.log('Request method:', request.method);
+        
+        // Get CORS headers - ensure they're always available
+        const corsHeaders = getCorsHeaders();
         
         // Handle CORS preflight request
         if (request.method === 'OPTIONS') {
+            context.log('Handling OPTIONS preflight request');
             return {
                 status: 200,
-                headers: getCorsHeaders()
+                headers: corsHeaders
             };
         }
         
         // Only allow POST for actual submissions
         if (request.method !== 'POST') {
-            return {
-                status: 405,
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    error: 'Method not allowed. Use POST to submit form data.'
-                })
-            };
+            return createResponse(405, {
+                error: 'Method not allowed. Use POST to submit form data.'
+            });
         }
 
-        // Authenticate user
-        const authResult = await verifyJWT(request, context);
-        if (!authResult.success) {
-            return createUnauthorizedResponse(authResult.error);
-        }
-
-        const user = authResult.user;
-        context.log(`Authenticated user: ${user.username} submitting equipment move form`);
-        
         try {
+            // Authenticate user
+            const authResult = await verifyJWT(request, context);
+            if (!authResult.success) {
+                return createUnauthorizedResponse(authResult.error);
+            }
+
+            const user = authResult.user;
+            context.log(`Authenticated user: ${user.username} submitting equipment move form`);
+            
             // Parse request body
             let requestData;
             try {
@@ -206,33 +217,19 @@ app.http('submitEquipmentMove', {
                 
                 if (!rawBody || rawBody.trim() === '') {
                     context.log.error('Empty request body received');
-                    return {
-                        status: 400,
-                        headers: {
-                            ...getCorsHeaders(),
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            error: 'Empty request body',
-                            details: 'No data received in request'
-                        })
-                    };
+                    return createResponse(400, {
+                        error: 'Empty request body',
+                        details: 'No data received in request'
+                    });
                 }
                 
                 requestData = JSON.parse(rawBody);
             } catch (parseError) {
                 context.log.error('Failed to parse request body:', parseError);
-                return {
-                    status: 400,
-                    headers: {
-                        ...getCorsHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        error: 'Invalid JSON in request body',
-                        details: parseError.message
-                    })
-                };
+                return createResponse(400, {
+                    error: 'Invalid JSON in request body',
+                    details: parseError.message
+                });
             }
             
             // Add more detailed logging
@@ -250,17 +247,10 @@ app.http('submitEquipmentMove', {
             const validationErrors = validateRequestData(requestData);
             if (validationErrors.length > 0) {
                 context.log.error('Validation errors:', validationErrors);
-                return {
-                    status: 400,
-                    headers: {
-                        ...getCorsHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        error: 'Validation failed',
-                        details: validationErrors
-                    })
-                };
+                return createResponse(400, {
+                    error: 'Validation failed',
+                    details: validationErrors
+                });
             }
             
             // Format data for Power Automate and database
@@ -278,17 +268,10 @@ app.http('submitEquipmentMove', {
                 context.log('Successfully saved to database');
             } catch (databaseError) {
                 context.log.error('Database save error:', databaseError);
-                return {
-                    status: 500,
-                    headers: {
-                        ...getCorsHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        error: 'Failed to save form data',
-                        details: databaseError.message
-                    })
-                };
+                return createResponse(500, {
+                    error: 'Failed to save form data',
+                    details: databaseError.message
+                });
             }
             
             // Send to Power Automate (if URL is configured)
@@ -323,31 +306,17 @@ app.http('submitEquipmentMove', {
             
             context.log('Form submission completed successfully:', response);
             
-            return {
-                status: 200,
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(response)
-            };
+            return createResponse(200, response);
             
         } catch (error) {
             context.log.error('Unexpected error in submitEquipmentMove:', error);
             
-            // Ensure we always return valid JSON
-            return {
-                status: 500,
-                headers: {
-                    ...getCorsHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    error: 'Internal server error',
-                    message: 'An unexpected error occurred while processing your request',
-                    details: process.env.NODE_ENV === 'development' ? error.message : 'Contact support if this persists'
-                })
-            };
+            // Ensure we always return proper CORS headers even on unexpected errors
+            return createResponse(500, {
+                error: 'Internal server error',
+                message: 'An unexpected error occurred while processing your request',
+                details: process.env.NODE_ENV === 'development' ? error.message : 'Contact support if this persists'
+            });
         }
     }
 });
