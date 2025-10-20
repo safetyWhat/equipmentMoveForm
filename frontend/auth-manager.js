@@ -4,11 +4,10 @@ class AuthManager {
         this.baseUrl = baseUrl;
         this.token = localStorage.getItem('authToken');
         this.user = null;
+        this.validationInProgress = false;
         
-        // Auto-validate token on initialization
-        if (this.token) {
-            this.validateToken();
-        }
+        // DON'T auto-validate in constructor - let pages call it explicitly
+        // This was causing race conditions
     }
     
     // Register new user (Admin only)
@@ -76,9 +75,16 @@ class AuthManager {
         }
     }
     
-    // Validate current token
+    // Validate current token - improved error handling
     async validateToken() {
         if (!this.token) return false;
+        
+        // Prevent multiple simultaneous validations
+        if (this.validationInProgress) {
+            return this.user !== null;
+        }
+        
+        this.validationInProgress = true;
         
         try {
             const response = await fetch(`${this.baseUrl}/validateToken`, {
@@ -91,22 +97,27 @@ class AuthManager {
             const data = await response.json();
             
             if (response.ok && data.valid) {
-				// Check if user object has all required fields
-            	console.log('User from validateToken:', data.user); // Debug log
+                console.log('User from validateToken:', data.user);
                 this.user = data.user;
+                this.validationInProgress = false;
                 return true;
             } else {
-                this.logout(); // Clear invalid token
+                // Only logout on explicit auth failures (401/403), not network errors
+                if (response.status === 401 || response.status === 403) {
+                    this.logout();
+                }
+                this.validationInProgress = false;
                 return false;
             }
         } catch (error) {
             console.error('Token validation error:', error);
-            this.logout();
+            // DON'T logout on network errors - keep the session alive
+            this.validationInProgress = false;
             return false;
         }
     }
     
-    // Submit equipment move form
+    // Submit equipment move form - improved error handling
     async submitEquipmentMove(formData) {
         if (!this.token) {
             throw new Error('Not authenticated. Please login first.');
@@ -122,7 +133,6 @@ class AuthManager {
                 body: JSON.stringify(formData)
             });
             
-            // Check if response has content before parsing
             const responseText = await response.text();
             let data;
             
@@ -133,10 +143,14 @@ class AuthManager {
                 throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
             }
             
-            if (response.status === 401) {
-                // Token expired or invalid
-                this.logout();
-                throw new Error('Session expired. Please login again.');
+            // Only logout on EXPLICIT authentication failures
+            if (response.status === 401 || response.status === 403) {
+                // Check if it's actually a token issue
+                const errorMessage = data.error || '';
+                if (/token|expired|invalid|unauthorized/i.test(errorMessage)) {
+                    this.logout();
+                    throw new Error('Session expired. Please login again.');
+                }
             }
             
             if (response.ok) {

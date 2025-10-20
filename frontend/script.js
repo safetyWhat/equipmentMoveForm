@@ -44,6 +44,7 @@ async function checkAuthStatus() {
         authLoading.style.display = 'block';
     }
     
+    // EXPLICITLY await validation before proceeding
     const isValid = await authManager.validateToken();
     
     if (authLoading) {
@@ -51,12 +52,10 @@ async function checkAuthStatus() {
     }
     
     if (!isValid) {
-        // Redirect to auth page if not authenticated
         window.location.href = 'auth.html';
         return;
     }
     
-    // Update UI with user info
     updateAuthUI(authManager.getCurrentUser());
 }
 
