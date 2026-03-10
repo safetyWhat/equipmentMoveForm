@@ -102,9 +102,12 @@ class AuthManager {
                 this.validationInProgress = false;
                 return true;
             } else {
-                // Only logout on explicit auth failures (401/403), not network errors
+                // Only logout on explicit token failures, not transient server errors
                 if (response.status === 401 || response.status === 403) {
-                    this.logout();
+                    const errorMessage = data.error || '';
+                    if (/token|expired|invalid|unauthorized/i.test(errorMessage)) {
+                        this.logout();
+                    }
                 }
                 this.validationInProgress = false;
                 return false;
