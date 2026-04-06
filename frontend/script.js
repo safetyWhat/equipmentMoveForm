@@ -3,7 +3,7 @@
 const CONFIG = {
     // Azure Function URLs will be set based on authentication
     AZURE_FUNCTION_URL: window.APP_CONFIG.API_URL,
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+    MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
 
@@ -108,7 +108,7 @@ function setupEventListeners() {
             
             files.forEach(file => {
                 if (file.size > CONFIG.MAX_FILE_SIZE) {
-                    alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+                    alert(`File ${file.name} is too large. Maximum size is 20MB.`);
                     hasErrors = true;
                 }
                 
@@ -216,7 +216,7 @@ function validateForm(formData) {
             if (file.size === 0) continue; // Skip empty files
             
             if (file.size > CONFIG.MAX_FILE_SIZE) {
-                errors.push(`File ${file.name} is too large. Maximum size is 10MB.`);
+                errors.push(`File ${file.name} is too large. Maximum size is 20MB.`);
             }
             
             if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {

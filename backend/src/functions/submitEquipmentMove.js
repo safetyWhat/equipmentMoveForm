@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // Configuration
 const CONFIG = {
     POWER_AUTOMATE_WEBHOOK_URL: process.env.POWER_AUTOMATE_WEBHOOK_URL || '',
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+    MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
 
@@ -68,7 +68,7 @@ function validateRequestData(data) {
             }
             
             if (photo.size && photo.size > CONFIG.MAX_FILE_SIZE) {
-                errors.push(`Photo ${photo.name} exceeds maximum file size (10MB)`);
+                errors.push(`Photo ${photo.name} exceeds maximum file size (20MB)`);
             }
             
             if (photo.type && !CONFIG.ALLOWED_FILE_TYPES.includes(photo.type)) {
