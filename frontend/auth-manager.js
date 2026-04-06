@@ -132,19 +132,14 @@ class AuthManager {
         }
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
-
             const response = await fetch(`${this.baseUrl}/submitEquipmentMove`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData),
-                signal: controller.signal
+                body: JSON.stringify(formData)
             });
-            clearTimeout(timeoutId);
             
             const responseText = await response.text();
             let data;
@@ -172,9 +167,6 @@ class AuthManager {
                 return { success: false, error: data.error || `Server error: ${response.status}`, details: data.details };
             }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                throw new Error('Request timed out. The server may be starting up — please try again.');
-            }
             console.error('Form submission error:', error);
             throw error;
         }
