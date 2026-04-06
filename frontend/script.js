@@ -339,6 +339,7 @@ async function handleFormSubmit(event) {
         
         // Handle authentication errors
         if (error.message.includes('Session expired') || error.message.includes('Not authenticated')) {
+            hideElement(loadingSpinner);
             window.location.href = 'auth.html';
             return;
         }

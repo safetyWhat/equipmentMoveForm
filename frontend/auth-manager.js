@@ -78,21 +78,26 @@ class AuthManager {
     // Validate current token - improved error handling
     async validateToken() {
         if (!this.token) return false;
-        
+
         // Prevent multiple simultaneous validations
         if (this.validationInProgress) {
             return this.user !== null;
         }
-        
+
         this.validationInProgress = true;
-        
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             const response = await fetch(`${this.baseUrl}/validateToken`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.token}`
-                }
+                },
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             const data = await response.json();
             
@@ -125,16 +130,21 @@ class AuthManager {
         if (!this.token) {
             throw new Error('Not authenticated. Please login first.');
         }
-        
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
             const response = await fetch(`${this.baseUrl}/submitEquipmentMove`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(formData),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             const responseText = await response.text();
             let data;
@@ -162,11 +172,14 @@ class AuthManager {
                 return { success: false, error: data.error || `Server error: ${response.status}`, details: data.details };
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out. The server may be starting up — please try again.');
+            }
             console.error('Form submission error:', error);
             throw error;
         }
     }
-    
+
     // Set authentication data
     setAuthData(token, user) {
         this.token = token;
