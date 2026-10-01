@@ -4,7 +4,11 @@ const CONFIG = {
     // Azure Function URLs will be set based on authentication
     AZURE_FUNCTION_URL: window.APP_CONFIG.API_URL,
     MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
-    ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+    ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'],
+    MAX_PHOTOS: 10,
+    // Photos are resized and re-encoded as JPEG before upload
+    PHOTO_MAX_DIMENSION: 2000, // px, longest side
+    PHOTO_JPEG_QUALITY: 0.8
 };
 
 // Global auth manager instance
@@ -105,6 +109,11 @@ function setupEventListeners() {
         fileInput.addEventListener('change', function(event) {
             const files = Array.from(event.target.files);
             let hasErrors = false;
+            
+            if (files.length > CONFIG.MAX_PHOTOS) {
+                alert(`You can attach up to ${CONFIG.MAX_PHOTOS} photos. You selected ${files.length}.`);
+                hasErrors = true;
+            }
             
             files.forEach(file => {
                 if (file.size > CONFIG.MAX_FILE_SIZE) {
@@ -211,6 +220,10 @@ function validateForm(formData) {
     
     // Validate files
     const files = formData.getAll('photos');
+    const photoCount = files.filter(file => file.size > 0).length;
+    if (photoCount > CONFIG.MAX_PHOTOS) {
+        errors.push(`You can attach up to ${CONFIG.MAX_PHOTOS} photos`);
+    }
     if (files.length > 0) {
         for (let file of files) {
             if (file.size === 0) continue; // Skip empty files
@@ -228,14 +241,138 @@ function validateForm(formData) {
     return errors;
 }
 
-// Convert files to base64
+// Load an image file into an <img> element (browsers apply EXIF orientation when drawing it)
+function loadImage(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error(`Could not read image ${file.name}`));
+        };
+        img.src = url;
+    });
+}
+
+// Resize to PHOTO_MAX_DIMENSION and re-encode as JPEG. Returns the original file
+// if it is already a small enough JPEG that re-encoding wouldn't help.
+async function compressImage(file) {
+    const img = await loadImage(file);
+    const scale = Math.min(1, CONFIG.PHOTO_MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.round(img.naturalWidth * scale);
+    const height = Math.round(img.naturalHeight * scale);
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    // JPEG has no transparency, so fill with white instead of the default black
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+            result => result ? resolve(result) : reject(new Error(`Could not compress image ${file.name}`)),
+            'image/jpeg',
+            CONFIG.PHOTO_JPEG_QUALITY
+        );
+    });
+    
+    if (scale === 1 && file.type === 'image/jpeg' && file.size <= blob.size) {
+        return file;
+    }
+
+    // Canvas drops EXIF, so copy the original's metadata (date taken, GPS, camera) across
+    let output = blob;
+    if (file.type === 'image/jpeg') {
+        try {
+            const exifSegment = extractExifSegment(await file.arrayBuffer());
+            if (exifSegment) {
+                output = await insertExifSegment(blob, exifSegment);
+            }
+        } catch (error) {
+            console.warn(`Could not copy photo metadata for ${file.name}:`, error);
+        }
+    }
+
+    const jpegName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([output], jpegName, { type: 'image/jpeg' });
+}
+
+// Find the EXIF (APP1) segment in a JPEG, including its marker and length bytes.
+// Returns a copy with the Orientation tag reset to 1, since the canvas has already
+// applied the rotation to the pixels. Returns null if the JPEG has no EXIF.
+function extractExifSegment(buffer) {
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null;
+
+    let offset = 2;
+    while (offset + 4 <= view.byteLength) {
+        if (view.getUint8(offset) !== 0xFF) return null;
+        const marker = view.getUint8(offset + 1);
+        if (marker === 0xDA || marker === 0xD9) return null; // Start of image data / end of image
+
+        const length = view.getUint16(offset + 2);
+        const isExif = marker === 0xE1 && offset + 10 <= view.byteLength &&
+            view.getUint32(offset + 4) === 0x45786966 && view.getUint16(offset + 8) === 0x0000; // "Exif\0\0"
+        if (isExif) {
+            const segment = new Uint8Array(buffer.slice(offset, offset + 2 + length));
+            resetExifOrientation(segment);
+            return segment;
+        }
+        offset += 2 + length;
+    }
+    return null;
+}
+
+// Set the Orientation tag (0x0112) in IFD0 to 1 (normal) in place
+function resetExifOrientation(segment) {
+    const view = new DataView(segment.buffer, segment.byteOffset, segment.byteLength);
+    const tiffStart = 10; // After marker (2), length (2) and "Exif\0\0" (6)
+    if (view.byteLength < tiffStart + 8) return;
+
+    const littleEndian = view.getUint16(tiffStart) === 0x4949; // "II"
+    const ifd0 = tiffStart + view.getUint32(tiffStart + 4, littleEndian);
+    if (ifd0 + 2 > view.byteLength) return;
+
+    const entryCount = view.getUint16(ifd0, littleEndian);
+    for (let i = 0; i < entryCount; i++) {
+        const entry = ifd0 + 2 + i * 12;
+        if (entry + 12 > view.byteLength) return;
+        if (view.getUint16(entry, littleEndian) === 0x0112) {
+            view.setUint16(entry + 8, 1, littleEndian);
+            return;
+        }
+    }
+}
+
+// Insert an EXIF segment straight after the SOI marker of a JPEG blob,
+// replacing the JFIF (APP0) header the canvas encoder adds
+async function insertExifSegment(jpegBlob, exifSegment) {
+    const bytes = new Uint8Array(await jpegBlob.arrayBuffer());
+    let rest = 2; // Skip SOI
+    if (bytes[2] === 0xFF && bytes[3] === 0xE0) {
+        rest = 4 + ((bytes[4] << 8) | bytes[5]);
+    }
+    return new Blob([bytes.subarray(0, 2), exifSegment, bytes.subarray(rest)], { type: 'image/jpeg' });
+}
+
+// Compress files and convert to base64
 async function convertFilesToBase64(files) {
     const base64Files = [];
     
-    for (let file of files) {
-        if (file.size === 0) continue; // Skip empty files
+    for (let originalFile of files) {
+        if (originalFile.size === 0) continue; // Skip empty files
         
         try {
+            const file = await compressImage(originalFile);
+            console.log(`Photo ${originalFile.name}: ${(originalFile.size / 1024).toFixed(0)}KB -> ${(file.size / 1024).toFixed(0)}KB`);
+            
             const base64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => {
@@ -254,8 +391,8 @@ async function convertFilesToBase64(files) {
                 data: base64
             });
         } catch (error) {
-            console.error(`Error converting file ${file.name} to base64:`, error);
-            throw new Error(`Failed to process file ${file.name}`);
+            console.error(`Error processing file ${originalFile.name}:`, error);
+            throw new Error(`Failed to process file ${originalFile.name}`);
         }
     }
     

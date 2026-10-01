@@ -7,7 +7,9 @@ const prisma = new PrismaClient();
 // Configuration
 const CONFIG = {
     POWER_AUTOMATE_WEBHOOK_URL: process.env.POWER_AUTOMATE_WEBHOOK_URL || '',
-    MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
+    MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB per photo
+    MAX_TOTAL_PHOTO_SIZE: 50 * 1024 * 1024, // 50MB across all photos
+    MAX_PHOTOS: 10,
     ALLOWED_FILE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 };
 
@@ -21,6 +23,12 @@ function createResponse(status, data, isError = false) {
         },
         body: JSON.stringify(data)
     };
+}
+
+// Decoded byte size of a base64 string (ignores the client-reported size)
+function getBase64ByteSize(base64) {
+    const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+    return Math.floor(base64.length * 3 / 4) - padding;
 }
 
 // Validation functions
@@ -61,20 +69,37 @@ function validateRequestData(data) {
     }
     
     // Validate photos array if present
-    if (data.photos && Array.isArray(data.photos)) {
-        data.photos.forEach((photo, index) => {
-            if (!photo.name || !photo.type || !photo.data) {
-                errors.push(`Photo ${index + 1} is missing required fields (name, type, data)`);
+    if (data.photos !== undefined && data.photos !== null) {
+        if (!Array.isArray(data.photos)) {
+            errors.push('photos must be an array');
+        } else {
+            if (data.photos.length > CONFIG.MAX_PHOTOS) {
+                errors.push(`Too many photos (${data.photos.length}). Maximum is ${CONFIG.MAX_PHOTOS}`);
             }
             
-            if (photo.size && photo.size > CONFIG.MAX_FILE_SIZE) {
-                errors.push(`Photo ${photo.name} exceeds maximum file size (20MB)`);
-            }
+            let totalSize = 0;
+            data.photos.forEach((photo, index) => {
+                if (!photo || !photo.name || !photo.type || typeof photo.data !== 'string' || !photo.data) {
+                    errors.push(`Photo ${index + 1} is missing required fields (name, type, data)`);
+                    return;
+                }
+                
+                // Measure the actual data rather than trusting photo.size
+                const actualSize = getBase64ByteSize(photo.data);
+                totalSize += actualSize;
+                if (actualSize > CONFIG.MAX_FILE_SIZE) {
+                    errors.push(`Photo ${photo.name} exceeds maximum file size (20MB)`);
+                }
+                
+                if (!CONFIG.ALLOWED_FILE_TYPES.includes(photo.type)) {
+                    errors.push(`Photo ${photo.name} has invalid file type. Allowed types: ${CONFIG.ALLOWED_FILE_TYPES.join(', ')}`);
+                }
+            });
             
-            if (photo.type && !CONFIG.ALLOWED_FILE_TYPES.includes(photo.type)) {
-                errors.push(`Photo ${photo.name} has invalid file type. Allowed types: ${CONFIG.ALLOWED_FILE_TYPES.join(', ')}`);
+            if (totalSize > CONFIG.MAX_TOTAL_PHOTO_SIZE) {
+                errors.push('Total size of photos exceeds 50MB');
             }
-        });
+        }
     }
     
     return errors;
@@ -274,19 +299,28 @@ app.http('submitEquipmentMove', {
                 });
             }
             
-            // Send to Power Automate (if URL is configured)
-            let powerAutomateResult = null;
-            if (CONFIG.POWER_AUTOMATE_WEBHOOK_URL && CONFIG.POWER_AUTOMATE_WEBHOOK_URL !== 'https://your-power-automate-flow-url-here') {
+            // Send to Power Automate. Photos are not stored anywhere else, so a failure
+            // here must be reported to the user rather than treated as success.
+            try {
+                await sendToPowerAutomate(formattedData);
+                context.log('Successfully sent to Power Automate');
+            } catch (powerAutomateError) {
+                context.log.error('Power Automate error:', powerAutomateError);
+                
+                // Remove the saved record so a resubmission doesn't create a duplicate
                 try {
-                    powerAutomateResult = await sendToPowerAutomate(formattedData);
-                    context.log('Successfully sent to Power Automate');
-                } catch (powerAutomateError) {
-                    context.log.error('Power Automate error:', powerAutomateError);
-                    // Continue processing even if Power Automate fails
-                    // You might want to store this in a queue for retry
+                    await prisma.equipmentMove.delete({ where: { id: databaseResult.id } });
+                    context.log(`Rolled back database record ${databaseResult.id}`);
+                } catch (rollbackError) {
+                    context.log.error(`Failed to roll back database record ${databaseResult.id}:`, rollbackError);
+                } finally {
+                    await prisma.$disconnect();
                 }
-            } else {
-                context.log.warn('Power Automate URL not configured - skipping webhook call');
+                
+                return createResponse(502, {
+                    error: 'Your submission could not be delivered. Nothing was saved - please try submitting again.',
+                    details: powerAutomateError.message
+                });
             }
             
             // Return success response
@@ -296,7 +330,7 @@ app.http('submitEquipmentMove', {
                 timestamp: formattedData.timestamp,
                 message: 'Equipment move form submitted successfully',
                 databaseId: databaseResult?.id,
-                powerAutomateStatus: powerAutomateResult ? 'sent' : 'skipped',
+                powerAutomateStatus: 'sent',
                 user: {
                     id: user.id,
                     name: user.name,
